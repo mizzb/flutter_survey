@@ -1,0 +1,30 @@
+<html lang="html">
+<head>
+    <script type="text/javascript">
+
+        let theme = document.getElementById("primaryColor").innerHTML;
+
+        document.getElementById("theme").innerHTML = theme;
+
+        function invokeNative() {
+            MessageInvoker.postMessage('Trigger from Javascript code');
+        }
+
+
+    </script>
+</head>
+
+<body>
+<form>
+    <input type="button" value="Click me!" onclick="invokeNative()"/>
+    <p>dddsss</p>
+    <p>dddsss</p>
+    <p>dddsss</p>
+    <p>dddsss</p>
+    <p>dddsss</p>
+    <p>dddsss</p>
+    <p id="theme"></p>
+</form>
+</body>
+
+</html>
