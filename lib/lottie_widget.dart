@@ -28,7 +28,20 @@ class LottieWidget extends StatelessWidget {
               fetchLottie(context, 'assets/lottie/lost_connection.json'),
             ]);
         break;
-
+      case 'connect_modem':
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              fetchLottie(context, 'assets/lottie/connect_modem.json'),
+            ]);
+        break;
+      case 'warning':
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              fetchLottie(context, 'assets/lottie/warning.json'),
+            ]);
+        break;
       default:
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
