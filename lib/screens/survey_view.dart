@@ -31,11 +31,12 @@ class SurveyViewWidget extends StatefulWidget {
 class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Device Connection
   var deviceConnection = false;
-  var devConnectionStatus = "Lost connection to the server";
+  var devConnectionStatus = "Connecting to server";
 
   /// Device Survey
   var deviceSurvey = false;
   var assignedSurveyId;
+  var surveyUrl;
 
   /// Device config for STOMP
   var deviceConfig = false;
@@ -124,18 +125,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                   )),
             ],
           ),
-          body: InAppWebView(
-            initialUrl: selectedUrl,
-            initialOptions: InAppWebViewGroupOptions(
-                crossPlatform: InAppWebViewOptions(
-              debuggingEnabled: true,
-              useOnLoadResource: true,
-              useShouldOverrideUrlLoading: true,
-            )),
-            onWebViewCreated: (InAppWebViewController controller) {
-              webView = controller;
-            },
-          ));
+          body: buildSurveyView());
     } else {
       /// Show connection error
       return Scaffold(
@@ -178,6 +168,48 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     }
   }
 
+  Widget buildSurveyView() {
+    if(this.deviceSurvey && assignedSurveyId != null){
+      return InAppWebView(
+        initialUrl: this.surveyUrl,
+        initialOptions: InAppWebViewGroupOptions(
+            crossPlatform: InAppWebViewOptions(
+              debuggingEnabled: true,
+              useOnLoadResource: true,
+              useShouldOverrideUrlLoading: true,
+            )),
+        onWebViewCreated: (InAppWebViewController controller) {
+          webView = controller;
+        },
+      );
+    }else{
+      return Container(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(child: LottieWidget(lottieType: "no_survey")),
+            Container(
+              child: Text(
+                "No survey assigned",
+                style: TextStyle(
+                    fontWeight: FontWeight.normal,
+                    fontSize: 30,
+                    color: Colors.white70,
+                    decoration: TextDecoration.none),
+              ),
+            )
+          ],
+        ),
+      );
+    }
+
+  }
+
+
+
+
   /// Method for setting up STOMP
   void setUpConfigSocket(serverIp, portNumber, deviceId) {
     var socketUrl =
@@ -198,11 +230,20 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         destination: '/notifications/config',
         callback: (dynamic frame) {
           if (frame != null) {
-            setState(() {
-              this.deviceConfig = true;
-            });
+            setUpConfig(widget.serverIp, widget.portNumber, widget.deviceId);
           }
-        });
+        },
+    );
+
+    client.subscribe(
+      destination: '/notifications/signage/device',
+      callback: (dynamic frame) {
+        if (frame != null) {
+          getSurvey(widget.serverIp, widget.portNumber, widget.deviceId);
+        }
+      },
+    );
+
   }
 
   /// Check if device connected to server
@@ -220,7 +261,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
     getDeviceStatus(url, headers).then(
         (value) => {
-              if (value.statusCode == 200 || value.statusCode == 201)
+              if (value != null && (value.statusCode == 200 || value.statusCode == 201))
                 {
                   setState(() {
                     this.deviceConnection = true;
@@ -228,10 +269,14 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 }
               else
                 {
-                  setState(() {
-                    this.devConnectionStatus = "Cannot connect to the server";
-                    this.deviceConnection = false;
-                  })
+                  if (this.deviceConnection)
+                    {
+                      setState(() {
+                        this.devConnectionStatus =
+                            "Cannot connect to the server";
+                        this.deviceConnection = false;
+                      })
+                    }
                 }
             },
         onError: (error) => {
@@ -300,30 +345,45 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                   setState(() {
                     this.assignedSurveyId = value.id;
                     this.deviceSurvey = true;
+                    this.surveyUrl = "http://" +
+                        serverIp.toString() +
+                        ":" +
+                        portNumber.toString() +
+                        "/takeSurvey?survey=" + value.id;
                   })
                 }
               else
                 {
                   setState(() {
-                    this.assignedSurveyId = null;;
+                    this.assignedSurveyId = null;
+                    ;
                     this.deviceSurvey = false;
                   })
                 }
             },
-        onError: (error) => {
-
-        });
+        onError: (error) => {});
   }
 
   Future<http.Response> getDeviceStatus(
-      String api, Map<String, String> requestHeaders) {
-    return http.get(api, headers: requestHeaders);
+      String api, Map<String, String> requestHeaders) async {
+    try {
+      final response = await http.get(api, headers: requestHeaders);
+      if ((response.statusCode == 200 || response.statusCode == 201) &&
+          response.body != null) {
+        return response;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
   }
 
   Future<Survey> getDevSurvey(
       String api, Map<String, String> requestHeaders) async {
     final response = await http.get(api, headers: requestHeaders);
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if ((response.statusCode == 200 || response.statusCode == 201) &&
+        response.body != null) {
       return Survey.fromJson(json.decode(response.body));
     } else {
       return new Survey();
@@ -333,7 +393,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   Future<Config> getDevConfig(
       String api, Map<String, String> requestHeaders) async {
     final response = await http.get(api, headers: requestHeaders);
-    if (response.statusCode == 200 || response.statusCode == 201) {
+    if ((response.statusCode == 200 || response.statusCode == 201) &&
+        response.body != null) {
       return Config.fromJson(json.decode(response.body));
     } else {
       return new Config();

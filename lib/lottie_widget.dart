@@ -42,6 +42,13 @@ class LottieWidget extends StatelessWidget {
               fetchLottie(context, 'assets/lottie/warning.json'),
             ]);
         break;
+      case 'no_survey':
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              fetchLottie(context, 'assets/lottie/no_survey.json'),
+            ]);
+        break;
       default:
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,

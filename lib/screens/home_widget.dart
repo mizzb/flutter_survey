@@ -24,8 +24,10 @@ class HomeWidget extends StatefulWidget {
 class _HomeWidgetState extends State<HomeWidget> {
   Timer _timer;
   var registerStatus = "Device registration in process";
+  var pairStatus = "Checking device status";
   var pairFlag = false;
   var registerFlag = false;
+
 
   @override
   initState() {
@@ -81,7 +83,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                   children: [
                     Container(
                       child: Text(
-                        "Please pair the device",
+                       this.pairStatus,
                         style: TextStyle(fontSize: 18),
                       ),
                     ),
@@ -123,7 +125,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 else if (mounted)
                   {
                     setState(() {
-                      registerStatus = "Device Registration failed";
+                      registerStatus = "Device Registration failed. Restart the app";
                     })
                   }
               },
@@ -131,7 +133,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 if (mounted)
                   {
                     setState(() {
-                      registerStatus = "Device Registration failed";
+                      registerStatus = "Device Registration failed. Restart the app";
                     })
                   }
               });
@@ -166,6 +168,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                     !this.pairFlag)
                   {
                     this.pairFlag = true,
+                    this.pairStatus = "Device paired",
                     timer.cancel(),
                     _timer.cancel(),
 
@@ -174,13 +177,19 @@ class _HomeWidgetState extends State<HomeWidget> {
                   }
                 else if (value.statusCode != 200 && value.statusCode != 201)
                   {
-                    print("Not paired"),
+                    print("Device not paired"),
+                    this.pairStatus = "Device not paired. Please pair the device",
                     setState(() {
                       this.pairFlag = false;
                     })
                   }
               },
-          onError: (error) => {print(error)});
+          onError: (error) => {
+            this.pairStatus = "Device not paired. Please pair the device",
+            setState(() {
+              this.pairFlag = false;
+            })
+          });
     });
 
   }
