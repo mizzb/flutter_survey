@@ -4,8 +4,10 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_survey/screens/survey_view.dart';
+import 'package:flutter_survey/screens/survey_widget.dart';
 import 'package:http/http.dart' as http;
+
+import '../constants/constants.dart' as CONSTANTS;
 
 class HomeWidget extends StatefulWidget {
   final deviceId;
@@ -23,15 +25,17 @@ class HomeWidget extends StatefulWidget {
 
 class _HomeWidgetState extends State<HomeWidget> {
   Timer _timer;
-  var registerStatus = "Device registration in process";
-  var pairStatus = "Checking device status";
+  var registerStatus = CONSTANTS.dev_reg_init;
+  var pairStatus = CONSTANTS.dev_pair_init;
+
   var pairFlag = false;
   var registerFlag = false;
-
+  var baseUrl;
 
   @override
   initState() {
     super.initState();
+    this.baseUrl = "http://" + widget.serverIp.toString() + ":" + widget.portNumber.toString();
   }
 
   @override
@@ -42,10 +46,15 @@ class _HomeWidgetState extends State<HomeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (this.registerStatus == "Device registration in process") {
-      registerDevice(widget.deviceId, widget.serverIp, widget.portNumber);
+
+    /// Make API call to register the device
+    if (this.registerStatus == CONSTANTS.dev_reg_init) {
+      registerDevice(widget.deviceId);
     }
 
+    /// If the device is registered, initialize timer
+    /// and start checking if the device is paired.
+    /// If paired reditect to Survey widget
     if (this.registerFlag) {
       checkIfPaired(widget.deviceId, widget.serverIp, widget.portNumber);
     }
@@ -78,7 +87,8 @@ class _HomeWidgetState extends State<HomeWidget> {
                   style: TextStyle(fontSize: 18),
                 ),
               ),
-              if (this.registerStatus == 'Device Registered')
+              /// If device registered, show device paring status
+              if (this.registerStatus == CONSTANTS.dev_reg_completed)
                 Column(
                   children: [
                     Container(
@@ -96,13 +106,11 @@ class _HomeWidgetState extends State<HomeWidget> {
     );
   }
 
-  void registerDevice(deviceID, serverIp, portNumber) {
-    if (deviceID != null && serverIp != null && portNumber != null) {
-      var api = "http://" +
-          serverIp.toString() +
-          ":" +
-          portNumber.toString() +
-          "/api/devices/register";
+  void registerDevice(deviceID) {
+    if (deviceID != null && this.baseUrl != null) {
+
+      var api = this.baseUrl + CONSTANTS.api_device_register;
+
       Map<String, String> requestHeaders = {
         HttpHeaders.contentTypeHeader: 'application/json',
       };
@@ -112,20 +120,21 @@ class _HomeWidgetState extends State<HomeWidget> {
         'type': 'SURVEY',
         'connectionStatus': 'NONE'
       };
+
       register(api, payLoad, requestHeaders).then(
           (value) => {
                 if ((value.statusCode == 200 || value.statusCode == 201) &&
                     mounted)
                   {
                     setState(() {
-                      registerStatus = "Device Registered";
+                      registerStatus = CONSTANTS.dev_reg_completed;
                       registerFlag = true;
                     })
                   }
                 else if (mounted)
                   {
                     setState(() {
-                      registerStatus = "Device Registration failed. Restart the app";
+                      registerStatus = CONSTANTS.dev_reg_failed;
                     })
                   }
               },
@@ -133,28 +142,26 @@ class _HomeWidgetState extends State<HomeWidget> {
                 if (mounted)
                   {
                     setState(() {
-                      registerStatus = "Device Registration failed. Restart the app";
+                      registerStatus = CONSTANTS.dev_reg_failed;
                     })
                   }
               });
     } else {
       if (mounted) {
         setState(() {
-          registerStatus = "Device Registration failed";
+          registerStatus = CONSTANTS.dev_reg_failed;
         });
       }
     }
   }
 
   void checkIfPaired(deviceId, serverIp, portNumber) {
+
     Map<String, String> headers = {
       'device-id': deviceId.toString(),
     };
-    var api = "http://" +
-        serverIp.toString() +
-        ":" +
-        portNumber.toString() +
-        "/api/device";
+
+    var api = this.baseUrl + CONSTANTS.api_device_status;
 
     this._timer = new Timer.periodic(new Duration(seconds: 10), (timer) {
       if (this.pairFlag) {
@@ -168,7 +175,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                     !this.pairFlag)
                   {
                     this.pairFlag = true,
-                    this.pairStatus = "Device paired",
+                    this.pairStatus = CONSTANTS.dev_paired,
                     timer.cancel(),
                     _timer.cancel(),
 
@@ -178,14 +185,14 @@ class _HomeWidgetState extends State<HomeWidget> {
                 else if (value.statusCode != 200 && value.statusCode != 201)
                   {
                     print("Device not paired"),
-                    this.pairStatus = "Device not paired. Please pair the device",
+                    this.pairStatus = CONSTANTS.dev_pair_fail,
                     setState(() {
                       this.pairFlag = false;
                     })
                   }
               },
           onError: (error) => {
-            this.pairStatus = "Device not paired. Please pair the device",
+            this.pairStatus = CONSTANTS.dev_pair_fail,
             setState(() {
               this.pairFlag = false;
             })

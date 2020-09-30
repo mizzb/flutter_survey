@@ -9,7 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../lottie_widget.dart';
 import 'home_widget.dart';
 
-const String discovery_service = "_http._tcp";
+import '../constants/constants.dart' as CONSTANTS;
 
 class MDNSWidget extends StatefulWidget {
   @override
@@ -17,7 +17,7 @@ class MDNSWidget extends StatefulWidget {
 }
 
 class _MDNSWidgetState extends State<MDNSWidget> {
-  var discoveryFlag = "INITIALISING";
+  var discoveryFlag = CONSTANTS.mdns_init;
   var deviceId;
 
   ServiceInfo mdnsDetails;
@@ -32,18 +32,18 @@ class _MDNSWidgetState extends State<MDNSWidget> {
     discoveryCallbacks = new DiscoveryCallbacks(
       onDiscovered: (ServiceInfo info) {
         setState(() {
-          discoveryFlag = "DISCOVERED";
+          discoveryFlag = CONSTANTS.mdns_discovered;
         });
       },
       onDiscoveryStarted: () {
         setState(() {
-          discoveryFlag = "DISCOVERED";
+          discoveryFlag = CONSTANTS.mdns_discovered;
         });
         print("Discovery Started");
       },
       onDiscoveryStopped: () {
         setState(() {
-          discoveryFlag = "FAILED";
+          discoveryFlag = CONSTANTS.mdns_failed;
         });
         print("Discovery failed");
       },
@@ -51,14 +51,14 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         print("Discovery Found: " + info.name);
 
         /// Check if discovered service is Queberry-halo
-        if (info.name == "queberry-halo") {
+        if (info.name == CONSTANTS.halo_title) {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           if (prefs.getString("deviceId") != null) {
             print("Id from Shared Pref: " + prefs.getString("deviceId"));
             setState(() {
               mdnsDetails = info;
               deviceId = prefs.getString("deviceId");
-              discoveryFlag = "RESOLVED";
+              discoveryFlag = CONSTANTS.mdns_resolved;
             });
           } else {
             var uuid = Uuid();
@@ -68,47 +68,27 @@ class _MDNSWidgetState extends State<MDNSWidget> {
             setState(() {
               mdnsDetails = info;
               deviceId = prefs.getString("deviceId");
-              discoveryFlag = "RESOLVED";
+              discoveryFlag = CONSTANTS.mdns_resolved;
             });
           }
         }
       },
     );
 
-    startMdnsDiscovery(discovery_service);
+    startMdnsDiscovery(CONSTANTS.discovery_service);
   }
 
   @override
   Widget build(BuildContext context) {
-    /// load HOME if resolved and deviceId generated
-    if (this.discoveryFlag == "RESOLVED" && this.deviceId != null) {
-      return Scaffold(
+    return Scaffold(
         appBar: AppBar(
-          title: Text("PRODIGY AI"),
+          title: Text(CONSTANTS.app_tittle),
         ),
-        body: HomeWidget(
-            deviceId: this.deviceId,
-            serverIp: mdnsDetails.address,
-            portNumber: mdnsDetails.port),
-      );
-    } else {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text("PRODIGY AI"),
-        ),
-        body: Center(
-          child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: loadStatusLottie(this.discoveryFlag)),),);
-
-
-    }
+        body: loadBody());
   }
 
   startMdnsDiscovery(String serviceType) {
     _mdnsPlugin = new FlutterMdnsPlugin(discoveryCallbacks: discoveryCallbacks);
-
-    /// cannot directly start discovery, have to wait for ios to be ready first...
     Timer(Duration(seconds: 3), () => _mdnsPlugin.startDiscovery(serviceType));
   }
 
@@ -123,40 +103,29 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   List<Widget> loadStatusLottie(discoveryFlag) {
     List<Widget> childrens = [];
     switch (discoveryFlag) {
-      case 'INITIALISING':
-        childrens.add(
-            Container(child: LottieWidget(lottieType: "connect_modem")));
-        childrens.add(Container(
-            child: generateText("initialized",)
-        ));
+      case CONSTANTS.mdns_init:
+        childrens
+            .add(Container(child: LottieWidget(lottieType: "connect_modem")));
+        childrens.add(Container(child: generateText(CONSTANTS.initialized)));
         break;
-      case 'DISCOVERED':
-        childrens.add(
-            Container(child: LottieWidget(lottieType: "connect_modem")));
-        childrens.add(Container(
-            child: generateText("searching..",)
-        ));
+      case CONSTANTS.mdns_discovered:
+        childrens
+            .add(Container(child: LottieWidget(lottieType: "connect_modem")));
+        childrens.add(Container(child: generateText(CONSTANTS.searching)));
         break;
-      case 'RESOLVED':
-        childrens.add(
-            Container(child: LottieWidget(lottieType: "connect_modem")));
-        childrens.add(Container(
-            child: generateText("resolving..",)
-        ));
+      case CONSTANTS.mdns_resolved:
+        childrens
+            .add(Container(child: LottieWidget(lottieType: "connect_modem")));
+        childrens.add(Container(child: generateText(CONSTANTS.resolving)));
         break;
-      case 'FAILED':
-        childrens.add(
-            Container(child: LottieWidget(lottieType: "warning")));
-        childrens.add(Container(
-            child: generateText("MDNS FAILED",)
-        ));
+      case CONSTANTS.mdns_failed:
+        childrens.add(Container(child: LottieWidget(lottieType: "warning")));
+        childrens.add(Container(child: generateText(CONSTANTS.failed)));
         break;
       default:
-        childrens.add(
-            Container(child: LottieWidget(lottieType: "warning")));
-        childrens.add(Container(
-            child: generateText("something went wrong",)
-        ));
+        childrens.add(Container(child: LottieWidget(lottieType: "warning")));
+        childrens
+            .add(Container(child: generateText(CONSTANTS.something_wrong)));
         break;
     }
     return childrens;
@@ -171,5 +140,21 @@ class _MDNSWidgetState extends State<MDNSWidget> {
           color: Colors.white70,
           decoration: TextDecoration.none),
     );
+  }
+
+  Widget loadBody() {
+    /// load HOME if resolved and deviceId generated
+    if (this.discoveryFlag == CONSTANTS.mdns_resolved &&
+        this.deviceId != null) {
+      return HomeWidget(
+          deviceId: this.deviceId,
+          serverIp: mdnsDetails.address,
+          portNumber: mdnsDetails.port);
+    } else {
+      return Center(
+          child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: loadStatusLottie(this.discoveryFlag)));
+    }
   }
 }

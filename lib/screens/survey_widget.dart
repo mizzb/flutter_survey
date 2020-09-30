@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -12,6 +13,8 @@ import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
 import 'package:http/http.dart' as http;
+
+import '../constants/constants.dart' as CONSTANTS;
 
 class SurveyViewWidget extends StatefulWidget {
   final deviceId;
@@ -30,7 +33,7 @@ class SurveyViewWidget extends StatefulWidget {
 class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Device Connection
   var deviceConnection = false;
-  var devConnectionStatus = "Connecting to Halo";
+  var devConnectionStatus = CONSTANTS.dev_conn_init;
 
   /// Device Survey
   var deviceSurvey = false;
@@ -39,10 +42,13 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   /// Device config for STOMP
   var deviceConfig = false;
-  var deviceConfigStatus = "Please wait, configuring the app";
+  var STOMPInit = false;
+  var deviceConfigStatus = CONSTANTS.dev_config_init;
 
   Timer _deviceStatusTime;
   InAppWebViewController webView;
+
+  var baseUrl;
 
   @override
   void dispose() {
@@ -53,29 +59,39 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   @override
   initState() {
     super.initState();
-    setUpConfig(widget.serverIp, widget.portNumber, widget.deviceId);
+    this.baseUrl = "http://" +
+        widget.serverIp.toString() +
+        ":" +
+        widget.portNumber.toString();
 
-    _deviceStatusTime = Timer.periodic(
-        Duration(seconds: 10),
-        (Timer t) => checkDeviceConnectivity(
-            widget.serverIp, widget.portNumber, widget.deviceId));
+    /// Fetch device config, configure STOMP and fetch survey
+    setUpConfig(widget.deviceId);
+
+    /// Check device connectivity
+    checkDeviceConnectivity(widget.deviceId);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("PRODIGY AI"),
+        title: Text(CONSTANTS.app_tittle),
         actions: <Widget>[
           Container(
               padding: EdgeInsets.symmetric(
                   horizontal: MediaQuery.of(context).size.width * 0.05),
-              child: Icon(
-                LineAwesomeIcons.link,
-                size: 30,
-                color: (this.deviceConnection)
-                    ? Colors.greenAccent
-                    : Colors.redAccent,
+              child: Center(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text("Device Id: " + widget.deviceId, style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    if(this.deviceConnection)
+                      Text("Connected to Halo", style: TextStyle(color: Colors.green, fontSize: 16),)
+                    else
+                      Text("Lost connection to Halo", style: TextStyle(color: Colors.red, fontSize: 16),)
+                  ],
+                ),
               )),
         ],
       ),
@@ -85,7 +101,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   Widget loadSurveyBody() {
     /// Show config status if config not loaded
-    if (!this.deviceConfig) {
+    if (!this.deviceConfig || !this.STOMPInit) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -112,13 +128,14 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       return buildSurveyView();
     } else {
       /// Show connection error
-      return Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(child: LottieWidget(lottieType: "lost_connection")),
+            Container(
+                width: MediaQuery.of(context).size.width * 0.4,
+                height: MediaQuery.of(context).size.height * 0.4,
+                child: LottieWidget(lottieType: "lost_connection")),
             Container(
               child: Text(
                 this.devConnectionStatus,
@@ -138,7 +155,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   Widget buildSurveyView() {
     if (this.deviceSurvey && assignedSurveyId != null) {
       return InAppWebView(
-        initialUrl: this.surveyUrl,
+        initialUrl: this.baseUrl + this.surveyUrl,
         initialOptions: InAppWebViewGroupOptions(
             crossPlatform: InAppWebViewOptions(
           debuggingEnabled: true,
@@ -159,7 +176,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
             Container(child: LottieWidget(lottieType: "no_survey")),
             Container(
               child: Text(
-                "No survey assigned",
+                CONSTANTS.no_survey_assigned,
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
                     fontSize: 30,
@@ -174,127 +191,131 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   /// Method for setting up STOMP
-  void setUpConfigSocket(serverIp, portNumber, deviceId) {
-    var socketUrl =
-        "ws://" + serverIp.toString() + ":" + portNumber.toString() + "/push";
+  void setUpConfigSocket(deviceId) {
+    var socketUrl = "ws://" +
+        widget.serverIp.toString() +
+        ":" +
+        widget.portNumber.toString() +
+        "/push";
 
     final stompClient = StompClient(
         config: StompConfig(
-            url: socketUrl,
-            onConnect: onConnect,
-            onWebSocketError: (dynamic error) =>
-                {print("Failed to set up STOMP")}));
+      url: socketUrl,
+      onConnect: onConnect,
+      onWebSocketError: (dynamic error) => {
+        setState(() {
+          this.STOMPInit = false;
+          this.deviceConfigStatus = CONSTANTS.dev_config_fail;
+        }),
+      },
+    ));
+
     stompClient.activate();
   }
 
   /// On STOMP Connect
   onConnect(StompClient client, StompFrame frame) {
+    if (!this.STOMPInit) {
+      setState(() {
+        this.STOMPInit = true;
+      });
+    }
     client.subscribe(
-      destination: '/notifications/config',
+      destination: CONSTANTS.api_STOMP_config,
       callback: (dynamic frame) {
         if (frame != null) {
-          setUpConfig(widget.serverIp, widget.portNumber, widget.deviceId);
+          setUpConfig(widget.deviceId);
         }
       },
     );
 
     client.subscribe(
-      destination: '/notifications/signage/device',
+      destination: CONSTANTS.api_signage_config,
       callback: (dynamic frame) {
         if (frame != null) {
-          getSurvey(widget.serverIp, widget.portNumber, widget.deviceId);
+          getSurvey(widget.deviceId);
         }
       },
     );
   }
 
-  /// Check if device connected to server
-  void checkDeviceConnectivity(serverIp, portNumber, deviceId) {
-    print("checking halo status");
-    var url = "http://" +
-        serverIp.toString() +
-        ":" +
-        portNumber.toString() +
-        "/api/device";
+  /// Check if device connected to server in every 10 seconds.
+  void checkDeviceConnectivity(deviceId) {
+    var url = this.baseUrl + CONSTANTS.api_device_status;
 
     Map<String, String> headers = {
       'device-id': deviceId.toString(),
     };
-
-    getDeviceStatus(url, headers).then(
-        (value) => {
-              if (value != null &&
-                  (value.statusCode == 200 || value.statusCode == 201))
-                {
-                  setState(() {
-                    this.deviceConnection = true;
-                  })
-                }
-              else
-                {
-                  if (this.deviceConnection)
-                    {
-                      setState(() {
-                        this.devConnectionStatus = "Cannot connect to the Halo";
-                        this.deviceConnection = false;
+    this._deviceStatusTime = Timer.periodic(
+        Duration(seconds: 10),
+        (Timer t) => {
+              print("checking halo status"),
+              getDeviceStatus(url, headers).then(
+                  (value) => {
+                        if (value != null &&
+                            (value.statusCode == 200 ||
+                                value.statusCode == 201))
+                          {
+                            setState(() {
+                              this.deviceConnection = true;
+                            })
+                          }
+                        else
+                          {
+                            if (this.deviceConnection)
+                              {
+                                setState(() {
+                                  this.devConnectionStatus =
+                                      CONSTANTS.dev_conn_fail;
+                                  this.deviceConnection = false;
+                                })
+                              }
+                          }
+                      },
+                  onError: (error) => {
+                        print(error),
+                        setState(() {
+                          this.devConnectionStatus = CONSTANTS.dev_conn_fail;
+                          this.deviceConnection = false;
+                        })
                       })
-                    }
-                }
-            },
-        onError: (error) => {
-              print(error),
-              setState(() {
-                this.devConnectionStatus = "Cannot connect to the Halo";
-                this.deviceConnection = false;
-              })
             });
   }
 
   /// Method for loading initial config and to set up STOMP
-  void setUpConfig(serverIp, portNumber, deviceId) {
-    var url = "http://" +
-        serverIp.toString() +
-        ":" +
-        portNumber.toString() +
-        "/api/signage/config";
+  void setUpConfig(deviceId) {
+    var url = this.baseUrl + CONSTANTS.api_signage_config;
 
-    Map<String, String> headers = {
-      'device-id': deviceId.toString(),
-    };
-
-    getDevConfig(url, headers).then(
+    getDevConfig(url).then(
         (value) => {
-              /// load survey if survey not available
-              if (!this.deviceSurvey)
-                {
-                  getSurvey(serverIp, portNumber, deviceId),
-                },
-
-              /// set up STOMP if not configured
-              if (!this.deviceConfig)
-                {
-                  setUpConfigSocket(serverIp, portNumber, deviceId),
-                },
-
               /// set config flag
               setState(() {
                 this.deviceConfig = true;
               }),
+
+              /// load survey if survey not available
+              if (!this.deviceSurvey)
+                {
+                  getSurvey(deviceId),
+                },
+
+              /// set up STOMP if not configured
+              if (!this.STOMPInit)
+                {
+                  setUpConfigSocket(deviceId),
+                },
             },
         onError: (error) => {
               setState(() {
+                this.deviceConfigStatus = CONSTANTS.dev_config_fail;
                 this.deviceConfig = false;
               }),
             });
   }
 
   /// Method for fetching assigned survey
-  void getSurvey(serverIp, portNumber, deviceId) {
-    var url = "http://" +
-        serverIp.toString() +
-        ":" +
-        portNumber.toString() +
-        "/api/device/survey";
+  void getSurvey(deviceId) {
+    var url = this.baseUrl + CONSTANTS.api_device_survey;
 
     Map<String, String> headers = {
       'device-id': deviceId.toString(),
@@ -306,25 +327,25 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 {
                   setState(() {
                     this.assignedSurveyId = value.id;
+                    this.surveyUrl = CONSTANTS.api_take_survey + value.id;
+                    print("Survey URL: " + this.surveyUrl);
                     this.deviceSurvey = true;
-                    this.surveyUrl = "http://" +
-                        serverIp.toString() +
-                        ":" +
-                        portNumber.toString() +
-                        "/takeSurvey?survey=" +
-                        value.id;
                   })
                 }
               else
                 {
                   setState(() {
                     this.assignedSurveyId = null;
-                    ;
                     this.deviceSurvey = false;
                   })
                 }
             },
-        onError: (error) => {});
+        onError: (error) => {
+              setState(() {
+                this.assignedSurveyId = null;
+                this.deviceSurvey = false;
+              })
+            });
   }
 
   Future<http.Response> getDeviceStatus(
@@ -353,9 +374,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     }
   }
 
-  Future<Config> getDevConfig(
-      String api, Map<String, String> requestHeaders) async {
-    final response = await http.get(api, headers: requestHeaders);
+  Future<Config> getDevConfig(String api) async {
+    final response = await http.get(api);
     if ((response.statusCode == 200 || response.statusCode == 201) &&
         response.body != null) {
       return Config.fromJson(json.decode(response.body));

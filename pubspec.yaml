@@ -49,4 +49,3 @@ flutter:
     - assets/lottie/
     - assets/html/
     - assets/html/index.html
-    - .env
