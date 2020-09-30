@@ -35,6 +35,7 @@ dependencies:
   line_awesome_icons: ^1.0.4+2
   webview_flutter: ^0.3.24
   flutter_inappwebview: ^4.0.0+4
+  flutter_dotenv: ^2.1.0
 
 dev_dependencies:
   flutter_test:
@@ -48,3 +49,4 @@ flutter:
     - assets/lottie/
     - assets/html/
     - assets/html/index.html
+    - .env

@@ -8,7 +8,6 @@ import 'package:flutter_survey/lottie_widget.dart';
 import 'package:flutter_survey/model/Config.dart';
 import 'package:flutter_survey/model/Survey.dart';
 import 'package:line_awesome_icons/line_awesome_icons.dart';
-import 'package:lottie/lottie.dart';
 import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
@@ -31,7 +30,7 @@ class SurveyViewWidget extends StatefulWidget {
 class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Device Connection
   var deviceConnection = false;
-  var devConnectionStatus = "Connecting to server";
+  var devConnectionStatus = "Connecting to Halo";
 
   /// Device Survey
   var deviceSurvey = false;
@@ -44,9 +43,6 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   Timer _deviceStatusTime;
   InAppWebViewController webView;
-
-  String selectedUrl =
-      'https://rodin-dev-ui.analytix-online.com/takeSurvey?survey=5dd7a167-8f2c-42ff-94e7-1bc945572ad4';
 
   @override
   void dispose() {
@@ -67,122 +63,93 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   @override
   Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("PRODIGY AI"),
+        actions: <Widget>[
+          Container(
+              padding: EdgeInsets.symmetric(
+                  horizontal: MediaQuery.of(context).size.width * 0.05),
+              child: Icon(
+                LineAwesomeIcons.link,
+                size: 30,
+                color: (this.deviceConnection)
+                    ? Colors.greenAccent
+                    : Colors.redAccent,
+              )),
+        ],
+      ),
+      body: loadSurveyBody(),
+    );
+  }
+
+  Widget loadSurveyBody() {
+    /// Show config status if config not loaded
     if (!this.deviceConfig) {
-      /// If device config flag is false, show connection
-      return Scaffold(
-        appBar: AppBar(
-          title: Text("PRODIGY AI"),
-          actions: <Widget>[
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
             Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * 0.05),
-                child: Icon(
-                  LineAwesomeIcons.link,
-                  size: 30,
-                  color: (this.deviceConnection)
-                      ? Colors.greenAccent
-                      : Colors.redAccent,
-                )),
+                width: MediaQuery.of(context).size.width * 0.4,
+                height: MediaQuery.of(context).size.height * 0.4,
+                child: LottieWidget(lottieType: "config_app")),
+            Container(
+              child: Text(
+                this.deviceConfigStatus,
+                style: TextStyle(
+                    fontWeight: FontWeight.normal,
+                    fontSize: 30,
+                    color: Colors.white70,
+                    decoration: TextDecoration.none),
+              ),
+            )
           ],
-        ),
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
-                  height: MediaQuery.of(context).size.height * 0.4,
-                  child: LottieWidget(lottieType: "config_app")),
-              Container(
-                child: Text(
-                  this.deviceConfigStatus,
-                  style: TextStyle(
-                      fontWeight: FontWeight.normal,
-                      fontSize: 30,
-                      color: Colors.white70,
-                      decoration: TextDecoration.none),
-                ),
-              )
-            ],
-          ),
         ),
       );
     } else if (this.deviceConnection) {
-      /// If device connected show Survey if assigned else show error
-      return Scaffold(
-          appBar: AppBar(
-            title: Text("PRODIGY AI"),
-            actions: <Widget>[
-              Container(
-                  padding: EdgeInsets.symmetric(
-                      horizontal: MediaQuery.of(context).size.width * 0.05),
-                  child: Icon(
-                    LineAwesomeIcons.link,
-                    size: 30,
-                    color: (this.deviceConnection)
-                        ? Colors.greenAccent
-                        : Colors.redAccent,
-                  )),
-            ],
-          ),
-          body: buildSurveyView());
+      /// Show Survey if assigned else show error
+      return buildSurveyView();
     } else {
       /// Show connection error
-      return Scaffold(
-        appBar: AppBar(
-          title: Text("PRODIGY AI"),
-          actions: <Widget>[
+      return Container(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(child: LottieWidget(lottieType: "lost_connection")),
             Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * 0.05),
-                child: Icon(
-                  LineAwesomeIcons.link,
-                  size: 30,
-                  color: (this.deviceConnection)
-                      ? Colors.greenAccent
-                      : Colors.redAccent,
-                )),
+              child: Text(
+                this.devConnectionStatus,
+                style: TextStyle(
+                    fontWeight: FontWeight.normal,
+                    fontSize: 30,
+                    color: Colors.white70,
+                    decoration: TextDecoration.none),
+              ),
+            )
           ],
-        ),
-        body: Container(
-          width: MediaQuery.of(context).size.width,
-          height: MediaQuery.of(context).size.height,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(child: LottieWidget(lottieType: "lost_connection")),
-              Container(
-                child: Text(
-                  this.devConnectionStatus,
-                  style: TextStyle(
-                      fontWeight: FontWeight.normal,
-                      fontSize: 30,
-                      color: Colors.white70,
-                      decoration: TextDecoration.none),
-                ),
-              )
-            ],
-          ),
         ),
       );
     }
   }
 
   Widget buildSurveyView() {
-    if(this.deviceSurvey && assignedSurveyId != null){
+    if (this.deviceSurvey && assignedSurveyId != null) {
       return InAppWebView(
         initialUrl: this.surveyUrl,
         initialOptions: InAppWebViewGroupOptions(
             crossPlatform: InAppWebViewOptions(
-              debuggingEnabled: true,
-              useOnLoadResource: true,
-              useShouldOverrideUrlLoading: true,
-            )),
+          debuggingEnabled: true,
+          useOnLoadResource: true,
+          useShouldOverrideUrlLoading: true,
+        )),
         onWebViewCreated: (InAppWebViewController controller) {
           webView = controller;
         },
       );
-    }else{
+    } else {
       return Container(
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
@@ -204,11 +171,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         ),
       );
     }
-
   }
-
-
-
 
   /// Method for setting up STOMP
   void setUpConfigSocket(serverIp, portNumber, deviceId) {
@@ -227,12 +190,12 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// On STOMP Connect
   onConnect(StompClient client, StompFrame frame) {
     client.subscribe(
-        destination: '/notifications/config',
-        callback: (dynamic frame) {
-          if (frame != null) {
-            setUpConfig(widget.serverIp, widget.portNumber, widget.deviceId);
-          }
-        },
+      destination: '/notifications/config',
+      callback: (dynamic frame) {
+        if (frame != null) {
+          setUpConfig(widget.serverIp, widget.portNumber, widget.deviceId);
+        }
+      },
     );
 
     client.subscribe(
@@ -243,12 +206,11 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         }
       },
     );
-
   }
 
   /// Check if device connected to server
   void checkDeviceConnectivity(serverIp, portNumber, deviceId) {
-    print("checking server status");
+    print("checking halo status");
     var url = "http://" +
         serverIp.toString() +
         ":" +
@@ -261,7 +223,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
     getDeviceStatus(url, headers).then(
         (value) => {
-              if (value != null && (value.statusCode == 200 || value.statusCode == 201))
+              if (value != null &&
+                  (value.statusCode == 200 || value.statusCode == 201))
                 {
                   setState(() {
                     this.deviceConnection = true;
@@ -272,8 +235,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                   if (this.deviceConnection)
                     {
                       setState(() {
-                        this.devConnectionStatus =
-                            "Cannot connect to the server";
+                        this.devConnectionStatus = "Cannot connect to the Halo";
                         this.deviceConnection = false;
                       })
                     }
@@ -282,7 +244,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         onError: (error) => {
               print(error),
               setState(() {
-                this.devConnectionStatus = "Cannot connect to the server";
+                this.devConnectionStatus = "Cannot connect to the Halo";
                 this.deviceConnection = false;
               })
             });
@@ -349,7 +311,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                         serverIp.toString() +
                         ":" +
                         portNumber.toString() +
-                        "/takeSurvey?survey=" + value.id;
+                        "/takeSurvey?survey=" +
+                        value.id;
                   })
                 }
               else

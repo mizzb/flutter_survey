@@ -19,6 +19,7 @@ class MDNSWidget extends StatefulWidget {
 class _MDNSWidgetState extends State<MDNSWidget> {
   var discoveryFlag = "INITIALISING";
   var deviceId;
+
   ServiceInfo mdnsDetails;
   FlutterMdnsPlugin _mdnsPlugin;
   DiscoveryCallbacks discoveryCallbacks;
@@ -48,6 +49,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
       },
       onResolved: (ServiceInfo info) async {
         print("Discovery Found: " + info.name);
+
         /// Check if discovered service is Queberry-halo
         if (info.name == "queberry-halo") {
           SharedPreferences prefs = await SharedPreferences.getInstance();
@@ -78,7 +80,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
 
   @override
   Widget build(BuildContext context) {
-    /// load home in resolved and deviceId generated
+    /// load HOME if resolved and deviceId generated
     if (this.discoveryFlag == "RESOLVED" && this.deviceId != null) {
       return Scaffold(
         appBar: AppBar(
@@ -90,138 +92,16 @@ class _MDNSWidgetState extends State<MDNSWidget> {
             portNumber: mdnsDetails.port),
       );
     } else {
-      switch (this.discoveryFlag) {
-        case 'INITIALISING':
-          return Scaffold(
-            appBar: AppBar(
-              title: Text("PRODIGY AI"),
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                      child: LottieWidget(lottieType: "connect_modem")),
-                  Container(
-                    child: Text(
-                      "initialized",
-                      style: TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 30,
-                          color: Colors.white70,
-                          decoration: TextDecoration.none),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          );
-          break;
-        case 'DISCOVERED':
-          return Scaffold(
-            appBar: AppBar(
-              title: Text("PRODIGY AI"),
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                      child: LottieWidget(lottieType: "connect_modem")),
-                  Container(
-                    child: Text(
-                      "searching..",
-                      style: TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 30,
-                          color: Colors.white70,
-                          decoration: TextDecoration.none),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          );
-          break;
-        case 'RESOLVED':
-          return Scaffold(
-            appBar: AppBar(
-              title: Text("PRODIGY AI"),
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                      width: MediaQuery.of(context).size.width * 0.4,
-                      height: MediaQuery.of(context).size.height * 0.4,
-                      child: LottieWidget(lottieType: "connect_modem")),
-                  Container(
-                    child: Text(
-                      "resolving..",
-                      style: TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 30,
-                          color: Colors.white70,
-                          decoration: TextDecoration.none),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          );
-          break;
-        case 'FAILED':
-          return Scaffold(
-            appBar: AppBar(
-              title: Text("PRODIGY AI"),
-            ),
-            body: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                      width: MediaQuery.of(context).size.width * 0.4,
-                      height: MediaQuery.of(context).size.height * 0.4,
-                      child: LottieWidget(lottieType: "warning")),
-                  Container(
-                    child: Text(
-                      "MDNS failed",
-                      style: TextStyle(
-                          fontWeight: FontWeight.normal,
-                          fontSize: 40,
-                          color: Colors.white70,
-                          decoration: TextDecoration.none),
-                    ),
-                  )
-                ],
-              ),
-            ),
-          );
-          break;
-        default:
-          return Container(
-            child: Column(
+      return Scaffold(
+        appBar: AppBar(
+          title: Text("PRODIGY AI"),
+        ),
+        body: Center(
+          child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                    width: MediaQuery.of(context).size.width * 0.4,
-                    height: MediaQuery.of(context).size.height * 0.4,
-                    child: LottieWidget(lottieType: "warning")),
-                Container(
-                  child: Text(
-                    "connection failed",
-                    style: TextStyle(
-                        fontWeight: FontWeight.normal,
-                        fontSize: 40,
-                        color: Colors.blueGrey[900],
-                        decoration: TextDecoration.none),
-                  ),
-                )
-              ],
-            ),
-          );
-      }
+              children: loadStatusLottie(this.discoveryFlag)),),);
+
+
     }
   }
 
@@ -238,5 +118,58 @@ class _MDNSWidgetState extends State<MDNSWidget> {
       _discoveredServices = <ServiceInfo>[];
       _mdnsPlugin.restartDiscovery();
     }
+  }
+
+  List<Widget> loadStatusLottie(discoveryFlag) {
+    List<Widget> childrens = [];
+    switch (discoveryFlag) {
+      case 'INITIALISING':
+        childrens.add(
+            Container(child: LottieWidget(lottieType: "connect_modem")));
+        childrens.add(Container(
+            child: generateText("initialized",)
+        ));
+        break;
+      case 'DISCOVERED':
+        childrens.add(
+            Container(child: LottieWidget(lottieType: "connect_modem")));
+        childrens.add(Container(
+            child: generateText("searching..",)
+        ));
+        break;
+      case 'RESOLVED':
+        childrens.add(
+            Container(child: LottieWidget(lottieType: "connect_modem")));
+        childrens.add(Container(
+            child: generateText("resolving..",)
+        ));
+        break;
+      case 'FAILED':
+        childrens.add(
+            Container(child: LottieWidget(lottieType: "warning")));
+        childrens.add(Container(
+            child: generateText("MDNS FAILED",)
+        ));
+        break;
+      default:
+        childrens.add(
+            Container(child: LottieWidget(lottieType: "warning")));
+        childrens.add(Container(
+            child: generateText("something went wrong",)
+        ));
+        break;
+    }
+    return childrens;
+  }
+
+  Text generateText(text) {
+    return Text(
+      text,
+      style: TextStyle(
+          fontWeight: FontWeight.normal,
+          fontSize: 30,
+          color: Colors.white70,
+          decoration: TextDecoration.none),
+    );
   }
 }
