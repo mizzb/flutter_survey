@@ -230,7 +230,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     );
 
     client.subscribe(
-      destination: CONSTANTS.api_signage_config,
+      destination: CONSTANTS.api_STOMP_device,
       callback: (dynamic frame) {
         if (frame != null) {
           getSurvey(widget.deviceId);

@@ -9,7 +9,7 @@ const String api_device_status = "/api/device";
 const String api_device_register = "/api/devices/register";
 const String api_device_survey =  "/api/device/survey";
 const String api_signage_config =  "/api/signage/config";
-const String api_take_survey =  "/takeSurvey?survey=";
+const String api_take_survey =  "/survey/takeSurvey?survey=";
 const String api_STOMP_config = "/notifications/config";
 const String api_STOMP_device = "/notifications/signage/device";
 
