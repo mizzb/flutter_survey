@@ -61,7 +61,7 @@ class _HomeWidgetState extends State<HomeWidget> {
 
     return Center(
       child: Container(
-        width: MediaQuery.of(context).size.width * 0.8,
+        width: MediaQuery.of(context).size.width * 0.95,
         height: MediaQuery.of(context).size.height * 0.4,
         child: Card(
           color: Colors.grey[800],

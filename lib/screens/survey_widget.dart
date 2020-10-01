@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -85,17 +84,28 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text("Device Id: " + widget.deviceId, style: TextStyle(color: Colors.white70, fontSize: 16)),
-                    if(this.deviceConnection)
-                      Text("Connected to Halo", style: TextStyle(color: Colors.green, fontSize: 16),)
+                    Text("Device Id: " + widget.deviceId,
+                        style: TextStyle(color: Colors.white70, fontSize: 16)),
+                    if (this.deviceConnection)
+                      Text(
+                        "Connected to Halo",
+                        style: TextStyle(color: Colors.green, fontSize: 15),
+                      )
                     else
-                      Text("Lost connection to Halo", style: TextStyle(color: Colors.red, fontSize: 16),)
+                      Text(
+                        "Halo not available",
+                        style: TextStyle(color: Colors.red, fontSize: 15),
+                      )
                   ],
                 ),
               )),
         ],
       ),
-      body: loadSurveyBody(),
+      body: SingleChildScrollView(
+          child: Container(
+              height: MediaQuery.of(context).size.height * 0.9,
+              width: MediaQuery.of(context).size.width,
+              child: loadSurveyBody())),
     );
   }
 
@@ -106,16 +116,13 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-                width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: LottieWidget(lottieType: "config_app")),
+            Container(child: LottieWidget(lottieType: "config_app")),
             Container(
               child: Text(
                 this.deviceConfigStatus,
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
-                    fontSize: 30,
+                    fontSize: 25,
                     color: Colors.white70,
                     decoration: TextDecoration.none),
               ),
@@ -132,16 +139,13 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-                width: MediaQuery.of(context).size.width * 0.4,
-                height: MediaQuery.of(context).size.height * 0.4,
-                child: LottieWidget(lottieType: "lost_connection")),
+            Container(child: LottieWidget(lottieType: "lost_connection")),
             Container(
               child: Text(
                 this.devConnectionStatus,
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
-                    fontSize: 30,
+                    fontSize: 25,
                     color: Colors.white70,
                     decoration: TextDecoration.none),
               ),
@@ -179,7 +183,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 CONSTANTS.no_survey_assigned,
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
-                    fontSize: 30,
+                    fontSize: 25,
                     color: Colors.white70,
                     decoration: TextDecoration.none),
               ),

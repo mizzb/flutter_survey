@@ -1,6 +1,6 @@
 library constants;
 
-const String app_tittle = "PRODIGY AI";
+const String app_tittle = "Queberry";
 const String discovery_service = "_http._tcp";
 const String halo_title = "queberry-halo";
 
