@@ -4,10 +4,11 @@ import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_survey/screens/survey_widget.dart';
 import 'package:http/http.dart' as http;
+import 'package:queberry_feedback/screens/survey_widget.dart';
 
 import '../constants/constants.dart' as CONSTANTS;
+import '../lottie_widget.dart';
 
 class HomeWidget extends StatefulWidget {
   final deviceId;
@@ -40,7 +41,8 @@ class _HomeWidgetState extends State<HomeWidget> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    if(_timer != null)
+      _timer.cancel();
     super.dispose();
   }
 
@@ -62,10 +64,10 @@ class _HomeWidgetState extends State<HomeWidget> {
     return Center(
       child: Container(
         width: MediaQuery.of(context).size.width * 0.95,
-        height: MediaQuery.of(context).size.height * 0.4,
+        height: MediaQuery.of(context).size.height * 0.5,
         child: Card(
-          color: Colors.grey[800],
-          shadowColor: Colors.black,
+          color: Colors.white70,
+          shadowColor: Color.fromRGBO(45, 51, 62, 50),
           elevation: 5,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -74,7 +76,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 padding: EdgeInsets.all(5),
                 child: Text(
                   "DEVICE ID: " + widget.deviceId,
-                  style: TextStyle(fontSize: 20),
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
               ),
               SizedBox(
@@ -84,7 +86,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                 padding: EdgeInsets.all(5),
                 child: Text(
                   this.registerStatus,
-                  style: TextStyle(fontSize: 18),
+                  style: TextStyle(fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
               ),
               /// If device registered, show device paring status
@@ -94,9 +96,10 @@ class _HomeWidgetState extends State<HomeWidget> {
                     Container(
                       child: Text(
                        this.pairStatus,
-                        style: TextStyle(fontSize: 18),
+                        style: TextStyle(fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
                       ),
                     ),
+                    Container(child: LottieWidget(lottieType: "loading_bubble"))
                   ],
                 ),
             ],

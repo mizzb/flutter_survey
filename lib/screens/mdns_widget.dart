@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_mdns_plugin/flutter_mdns_plugin.dart';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
 
@@ -10,6 +11,7 @@ import '../lottie_widget.dart';
 import 'home_widget.dart';
 
 import '../constants/constants.dart' as CONSTANTS;
+import 'package:package_info/package_info.dart';
 
 class MDNSWidget extends StatefulWidget {
   @override
@@ -20,38 +22,48 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   var discoveryFlag = CONSTANTS.mdns_init;
   var deviceId;
 
+  PackageInfo _packageInfo = PackageInfo(
+    appName: 'Unknown',
+    packageName: 'Unknown',
+    version: 'Unknown',
+    buildNumber: 'Unknown',
+  );
   ServiceInfo mdnsDetails;
   FlutterMdnsPlugin _mdnsPlugin;
   DiscoveryCallbacks discoveryCallbacks;
   List<ServiceInfo> _discoveredServices = <ServiceInfo>[];
+  Timer _timer;
 
   @override
   initState() {
     super.initState();
-
     discoveryCallbacks = new DiscoveryCallbacks(
       onDiscovered: (ServiceInfo info) {
-        setState(() {
-          discoveryFlag = CONSTANTS.mdns_discovered;
-        });
+        if (mounted)
+          setState(() {
+            discoveryFlag = CONSTANTS.mdns_discovered;
+          });
       },
       onDiscoveryStarted: () {
-        setState(() {
-          discoveryFlag = CONSTANTS.mdns_discovered;
-        });
+        if (mounted)
+          setState(() {
+            discoveryFlag = CONSTANTS.mdns_discovered;
+          });
         print("Discovery Started");
       },
       onDiscoveryStopped: () {
-        setState(() {
-          discoveryFlag = CONSTANTS.mdns_failed;
-        });
+        if (mounted)
+          setState(() {
+            discoveryFlag = CONSTANTS.mdns_failed;
+          });
         print("Discovery failed");
       },
       onResolved: (ServiceInfo info) async {
         print("Discovery Found: " + info.name);
 
         /// Check if discovered service is Queberry-halo
-        if (info.name == CONSTANTS.halo_title) {
+        if (info.name == CONSTANTS.halo_title &&
+            discoveryFlag != CONSTANTS.mdns_resolved) {
           SharedPreferences prefs = await SharedPreferences.getInstance();
           if (prefs.getString("deviceId") != null) {
             print("Id from Shared Pref: " + prefs.getString("deviceId"));
@@ -74,22 +86,42 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         }
       },
     );
+    _initPackageInfo()
+        .then((value) => {
+          // startMdnsDiscovery(CONSTANTS.discovery_service)
 
-    startMdnsDiscovery(CONSTANTS.discovery_service);
+        });
+
+  }
+
+  @override
+  void dispose() {
+    this._mdnsPlugin.stopDiscovery();
+    this._timer.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
         appBar: AppBar(
-          title: Text(CONSTANTS.app_tittle),
+          title: Container(
+              child: Column(
+            children: [
+              Text(CONSTANTS.app_tittle),
+              if (this._packageInfo.version != null)
+                Text("V " + this._packageInfo.version,
+                    style: TextStyle(fontSize: 13, color: Colors.white70)),
+            ],
+          )),
         ),
         body: loadBody());
   }
 
   startMdnsDiscovery(String serviceType) {
+    print("MDNS INIT FOR " + serviceType);
     _mdnsPlugin = new FlutterMdnsPlugin(discoveryCallbacks: discoveryCallbacks);
-    Timer(Duration(seconds: 3), () => _mdnsPlugin.startDiscovery(serviceType));
+    this._timer = Timer(Duration(seconds: 3), () => _mdnsPlugin.startDiscovery(serviceType));
   }
 
   void reassemble() {
@@ -102,6 +134,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
 
   List<Widget> loadStatusLottie(discoveryFlag) {
     List<Widget> childrens = [];
+    print(discoveryFlag);
     switch (discoveryFlag) {
       case CONSTANTS.mdns_init:
         childrens
@@ -137,7 +170,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
       style: TextStyle(
           fontWeight: FontWeight.normal,
           fontSize: 30,
-          color: Colors.white70,
+          color: Colors.blueGrey,
           decoration: TextDecoration.none),
     );
   }
@@ -157,4 +190,33 @@ class _MDNSWidgetState extends State<MDNSWidget> {
               children: loadStatusLottie(this.discoveryFlag)));
     }
   }
+
+  Future<void> _initPackageInfo() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    setState(() {
+      _packageInfo = info;
+    });
+  }
+
+
+//
+//  /// MDNS TEST
+//  Future<void> fetchServer(String name) async {
+//
+//
+//
+//
+//    final MDnsClient client = MDnsClient();
+//    await client.start();
+//    await for (IPAddressResourceRecord record in client
+//        .lookup<IPAddressResourceRecord>(ResourceRecordQuery.addressIPv4(name))) {
+//      print('Found address (${record.address}).');
+//    }
+//
+//    await for (IPAddressResourceRecord record in client
+//        .lookup<IPAddressResourceRecord>(ResourceRecordQuery.addressIPv6(name))) {
+//      print('Found address (${record.address}).');
+//    }
+//    client.stop();
+//  }
 }

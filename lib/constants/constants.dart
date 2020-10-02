@@ -39,6 +39,8 @@ const String dev_conn_fail = "Cannot connect to the Halo";
 const String dev_config_init = "Configuring the app";
 const String dev_config_fail = "App configuration failed. Restart the app";
 const String no_survey_assigned = "No survey assigned";
+const String loading_survey = "Loading Survey";
+const String survey_not_assigned = "Survey not assigned";
 
 
 

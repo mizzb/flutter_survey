@@ -3,17 +3,18 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:flutter_survey/lottie_widget.dart';
-import 'package:flutter_survey/model/Config.dart';
-import 'package:flutter_survey/model/Survey.dart';
-import 'package:line_awesome_icons/line_awesome_icons.dart';
+
+import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:package_info/package_info.dart';
+import 'package:queberry_feedback/model/Config.dart';
+import 'package:queberry_feedback/model/Survey.dart';
 import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
 import 'package:http/http.dart' as http;
 
 import '../constants/constants.dart' as CONSTANTS;
+import '../lottie_widget.dart';
 
 class SurveyViewWidget extends StatefulWidget {
   final deviceId;
@@ -30,6 +31,7 @@ class SurveyViewWidget extends StatefulWidget {
 }
 
 class _WebViewWidgetState extends State<SurveyViewWidget> {
+
   /// Device Connection
   var deviceConnection = false;
   var devConnectionStatus = CONSTANTS.dev_conn_init;
@@ -44,15 +46,22 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   var STOMPInit = false;
   var deviceConfigStatus = CONSTANTS.dev_config_init;
 
-  Timer _deviceStatusTime;
-  InAppWebViewController webView;
-
   var baseUrl;
+
+  PackageInfo _packageInfo = PackageInfo(
+    appName: 'Unknown',
+    packageName: 'Unknown',
+    version: 'Unknown',
+    buildNumber: 'Unknown',
+  );
+  Timer _deviceStatusTime;
+
 
   @override
   void dispose() {
     this._deviceStatusTime.cancel();
     super.dispose();
+
   }
 
   @override
@@ -62,7 +71,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         widget.serverIp.toString() +
         ":" +
         widget.portNumber.toString();
-
+    _initPackageInfo();
     /// Fetch device config, configure STOMP and fetch survey
     setUpConfig(widget.deviceId);
 
@@ -72,41 +81,60 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(CONSTANTS.app_tittle),
-        actions: <Widget>[
-          Container(
-              padding: EdgeInsets.symmetric(
-                  horizontal: MediaQuery.of(context).size.width * 0.05),
-              child: Center(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text("Device Id: " + widget.deviceId,
-                        style: TextStyle(color: Colors.white70, fontSize: 16)),
-                    if (this.deviceConnection)
-                      Text(
-                        "Connected to Halo",
-                        style: TextStyle(color: Colors.green, fontSize: 15),
-                      )
-                    else
-                      Text(
-                        "Halo not available",
-                        style: TextStyle(color: Colors.red, fontSize: 15),
-                      )
-                  ],
-                ),
-              )),
-        ],
-      ),
-      body: SingleChildScrollView(
-          child: Container(
-              height: MediaQuery.of(context).size.height * 0.9,
-              width: MediaQuery.of(context).size.width,
-              child: loadSurveyBody())),
-    );
+    if (this.deviceSurvey &&
+        this.assignedSurveyId != null &&
+        this.deviceConnection &&
+        this.deviceConfig) {
+      return Scaffold(
+        body: Container(
+            width: MediaQuery.of(context).size.width, child: loadSurveyBody()),
+      );
+    } else {
+      return Scaffold(
+        appBar: AppBar(
+          title: Container(
+              child: Column(
+            children: [
+              Text(CONSTANTS.app_tittle),
+              if (this._packageInfo.version != null)
+                Text("V " + this._packageInfo.version,
+                    style: TextStyle(fontSize: 13, color: Colors.white70)),
+            ],
+          )),
+          actions: <Widget>[
+            Container(
+                padding: EdgeInsets.symmetric(
+                    horizontal: MediaQuery.of(context).size.width * 0.05),
+                child: Center(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text("Device Id: " + widget.deviceId,
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 16)),
+                      if (this.deviceConnection)
+                        Text(
+                          "Connected to Halo",
+                          style: TextStyle(color: Colors.green, fontSize: 15),
+                        )
+                      else
+                        Text(
+                          "Halo not available",
+                          style: TextStyle(color: Colors.red, fontSize: 15),
+                        )
+                    ],
+                  ),
+                )),
+          ],
+        ),
+        body: SingleChildScrollView(
+            child: Container(
+                height: MediaQuery.of(context).size.height * 0.9,
+                width: MediaQuery.of(context).size.width,
+                child: loadSurveyBody())),
+      );
+    }
   }
 
   Widget loadSurveyBody() {
@@ -146,7 +174,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
                     fontSize: 25,
-                    color: Colors.white70,
+                    color: Colors.blueGrey,
                     decoration: TextDecoration.none),
               ),
             )
@@ -158,18 +186,29 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   Widget buildSurveyView() {
     if (this.deviceSurvey && assignedSurveyId != null) {
-      return InAppWebView(
-        initialUrl: this.baseUrl + this.surveyUrl,
-        initialOptions: InAppWebViewGroupOptions(
-            crossPlatform: InAppWebViewOptions(
-          debuggingEnabled: true,
-          useOnLoadResource: true,
-          useShouldOverrideUrlLoading: true,
-        )),
-        onWebViewCreated: (InAppWebViewController controller) {
-          webView = controller;
-        },
-      );
+      return new WebviewScaffold(
+          url: this.baseUrl + this.surveyUrl,
+          withZoom: true,
+          withLocalStorage: true,
+          hidden: true,
+          initialChild: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(child: LottieWidget(lottieType: "loading")),
+                Container(
+                  child: Text(
+                    CONSTANTS.loading_survey,
+                    style: TextStyle(
+                        fontWeight: FontWeight.normal,
+                        fontSize: 25,
+                        color: Colors.blueGrey,
+                        decoration: TextDecoration.none),
+                  ),
+                )
+              ],
+            ),
+          ));
     } else {
       return Container(
         width: MediaQuery.of(context).size.width,
@@ -180,11 +219,11 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
             Container(child: LottieWidget(lottieType: "no_survey")),
             Container(
               child: Text(
-                CONSTANTS.no_survey_assigned,
+                CONSTANTS.survey_not_assigned,
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
                     fontSize: 25,
-                    color: Colors.white70,
+                    color: Colors.blueGrey,
                     decoration: TextDecoration.none),
               ),
             )
@@ -386,5 +425,12 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     } else {
       return new Config();
     }
+  }
+
+  Future<void> _initPackageInfo() async {
+    final PackageInfo info = await PackageInfo.fromPlatform();
+    setState(() {
+      _packageInfo = info;
+    });
   }
 }

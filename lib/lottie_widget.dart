@@ -49,6 +49,20 @@ class LottieWidget extends StatelessWidget {
               fetchLottie(context, 'assets/lottie/no_survey.json'),
             ]);
         break;
+      case 'loading':
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              fetchLottie(context, 'assets/lottie/loading.json'),
+            ]);
+        break;
+      case 'loading_bubble':
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              fetchLottie(context, 'assets/lottie/loading_bubble.json'),
+            ]);
+        break;
       default:
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -63,6 +77,7 @@ class LottieWidget extends StatelessWidget {
     return Lottie.asset(
       path,
       width: MediaQuery.of(context).size.width / 4,
+      height: MediaQuery.of(context).size.height * 0.2,
       frameBuilder: (context, child, composition) {
         return AnimatedOpacity(
           child: child,
