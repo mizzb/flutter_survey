@@ -88,8 +88,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
     );
     _initPackageInfo()
         .then((value) => {
-          // startMdnsDiscovery(CONSTANTS.discovery_service)
-
+          startMdnsDiscovery(CONSTANTS.discovery_service)
         });
 
   }
