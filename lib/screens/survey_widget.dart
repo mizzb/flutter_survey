@@ -31,15 +31,17 @@ class SurveyViewWidget extends StatefulWidget {
 }
 
 class _WebViewWidgetState extends State<SurveyViewWidget> {
-
   /// Device Connection
   var deviceConnection = false;
   var devConnectionStatus = CONSTANTS.dev_conn_init;
 
   /// Device Survey
-  var deviceSurvey = false;
   var assignedSurveyId;
   var surveyUrl;
+
+  var deviceSurvey = false; // flag to check survey assigned or not
+  var surveyEnabled = false; // flag to check if survey enabled or not
+  var surveyFlag = false; // flag to handle survey UI using timer
 
   /// Device config for STOMP
   var deviceConfig = false;
@@ -54,14 +56,16 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     version: 'Unknown',
     buildNumber: 'Unknown',
   );
-  Timer _deviceStatusTime;
 
+  Timer _deviceStatusTime;
+  Timer _surveyTimer;
+
+  Config config;
 
   @override
   void dispose() {
     this._deviceStatusTime.cancel();
     super.dispose();
-
   }
 
   @override
@@ -72,6 +76,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         ":" +
         widget.portNumber.toString();
     _initPackageInfo();
+
     /// Fetch device config, configure STOMP and fetch survey
     setUpConfig(widget.deviceId);
 
@@ -128,6 +133,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 )),
           ],
         ),
+
         body: SingleChildScrollView(
             child: Container(
                 height: MediaQuery.of(context).size.height * 0.9,
@@ -185,7 +191,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   Widget buildSurveyView() {
-    if (this.deviceSurvey && assignedSurveyId != null) {
+    if (this.deviceSurvey && assignedSurveyId != null && this.surveyEnabled && this.surveyFlag) {
+      startSurveyTimer(); // start timer
       return new WebviewScaffold(
           url: this.baseUrl + this.surveyUrl,
           withZoom: true,
@@ -215,23 +222,45 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         height: MediaQuery.of(context).size.height,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(child: LottieWidget(lottieType: "no_survey")),
-            Container(
-              child: Text(
-                CONSTANTS.survey_not_assigned,
-                style: TextStyle(
-                    fontWeight: FontWeight.normal,
-                    fontSize: 25,
-                    color: Colors.blueGrey,
-                    decoration: TextDecoration.none),
-              ),
-            )
-          ],
+          children: getSurveyError()
         ),
       );
     }
   }
+
+  List<Widget> getSurveyError() {
+    List<Widget> childrens = [];
+    if(!this.deviceSurvey && assignedSurveyId == null){
+      childrens.add(LottieWidget(lottieType: "no_survey"));
+      childrens.add( Container(
+        child: getSurveyMessage(CONSTANTS.survey_not_assigned),
+      ));
+    }else if(!this.surveyEnabled){
+      childrens.add(LottieWidget(lottieType: "no_survey"));
+      childrens.add( Container(
+        child: getSurveyMessage(CONSTANTS.survey_disabled),
+      ));
+    }else {
+      childrens.add(LottieWidget(lottieType: "sleeping_cat"));
+      childrens.add( Container(
+        child: getSurveyMessage(CONSTANTS.survey_notAvlbl),
+      ));
+    }
+
+    return childrens;
+  }
+
+  Text getSurveyMessage(String message) {
+      return Text(
+        message,
+        style: TextStyle(
+            fontWeight: FontWeight.normal,
+            fontSize: 25,
+            color: Colors.blueGrey,
+            decoration: TextDecoration.none),
+      );
+  }
+
 
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
@@ -280,6 +309,20 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         }
       },
     );
+
+    client.subscribe(
+      destination: CONSTANTS.api_STOMP_survey,
+      callback: (dynamic frame) {
+        if (frame != null) {
+          var resp = json.decode(frame.body);
+          if(resp['deviceId'] != null && resp['deviceId'] == widget.deviceId){
+            setState(() {
+              this.surveyFlag = true;
+            });
+          }
+        }
+      },
+    );
   }
 
   /// Check if device connected to server in every 10 seconds.
@@ -289,6 +332,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     Map<String, String> headers = {
       'device-id': deviceId.toString(),
     };
+
     this._deviceStatusTime = Timer.periodic(
         Duration(seconds: 10),
         (Timer t) => {
@@ -299,9 +343,11 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                             (value.statusCode == 200 ||
                                 value.statusCode == 201))
                           {
-                            setState(() {
-                              this.deviceConnection = true;
-                            })
+                            if(!this.deviceConnection){
+                              setState(() {
+                                this.deviceConnection = true;
+                              })
+                            }
                           }
                         else
                           {
@@ -333,13 +379,19 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         (value) => {
               /// set config flag
               setState(() {
+                this.config = value;
                 this.deviceConfig = true;
               }),
 
               /// load survey if survey not available
-              if (!this.deviceSurvey)
+              if (!this.deviceSurvey && this.config.survey.enabled)
                 {
+                  this.surveyEnabled = true,
                   getSurvey(deviceId),
+                }
+              else
+                {
+                  this.surveyEnabled = false
                 },
 
               /// set up STOMP if not configured
@@ -391,6 +443,16 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
             });
   }
 
+  void startSurveyTimer() {
+    int duration = this.config.survey.timeout;
+    this._surveyTimer = new Timer(Duration(seconds: duration), () {
+      setState(() {
+        this.surveyFlag = false;
+      });
+      this._surveyTimer.cancel();
+    });
+  }
+
   Future<http.Response> getDeviceStatus(
       String api, Map<String, String> requestHeaders) async {
     try {
@@ -433,4 +495,6 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       _packageInfo = info;
     });
   }
+
+
 }

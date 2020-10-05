@@ -16,6 +16,7 @@ class Config {
     this.theme,
     this.token,
     this.sms,
+    this.survey,
     this.home,
     this.time,
     this.activeProfiles,
@@ -28,6 +29,7 @@ class Config {
   Theme theme;
   Token token;
   Sms sms;
+  SurveyConf survey;
   Home home;
   DateTime time;
   List<String> activeProfiles;
@@ -40,6 +42,7 @@ class Config {
     theme: Theme.fromJson(json["theme"]),
     token: Token.fromJson(json["token"]),
     sms: Sms.fromJson(json["sms"]),
+    survey: SurveyConf.fromJson(json["survey"]),
     home: Home.fromJson(json["home"]),
     time: DateTime.parse(json["time"]),
     activeProfiles: List<String>.from(json["activeProfiles"].map((x) => x)),
@@ -53,6 +56,7 @@ class Config {
     "theme": theme.toJson(),
     "token": token.toJson(),
     "sms": sms.toJson(),
+    "survey": survey.toJson(),
     "home": home.toJson(),
     "time": time.toIso8601String(),
     "activeProfiles": List<dynamic>.from(activeProfiles.map((x) => x)),
@@ -281,6 +285,42 @@ class Sms {
     "enabled": enabled,
     "updates": updates,
     "chooseMedium": chooseMedium,
+  };
+}
+
+class SurveyConf {
+  SurveyConf({
+    this.id,
+    this.version,
+    this.enabled,
+    this.timeout,
+    this.message,
+    this.trigger,
+  });
+
+  String id;
+  int version;
+  bool enabled;
+  int timeout;
+  String message;
+  String trigger;
+
+  factory SurveyConf.fromJson(Map<String, dynamic> json) => SurveyConf(
+    id: json["id"],
+    version: json["version"],
+    enabled: json["enabled"],
+    timeout: json["timeout"],
+    message: json["message"],
+    trigger: json["trigger"],
+  );
+
+  Map<String, dynamic> toJson() => {
+    "id": id,
+    "version": version,
+    "enabled": enabled,
+    "timeout": timeout,
+    "message": message,
+    "trigger": trigger,
   };
 }
 

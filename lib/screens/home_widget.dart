@@ -107,6 +107,7 @@ class _HomeWidgetState extends State<HomeWidget> {
         ),
       ),
     );
+
   }
 
   void registerDevice(deviceID) {

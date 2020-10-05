@@ -63,6 +63,16 @@ class LottieWidget extends StatelessWidget {
               fetchLottie(context, 'assets/lottie/loading_bubble.json'),
             ]);
         break;
+      case 'sleeping_cat':
+        return Column(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: <Widget>[
+              fetchLottie(context, 'assets/lottie/sleeping_cat.json'),
+            ]);
+        break;
+
+
+
       default:
         return Column(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,

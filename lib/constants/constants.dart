@@ -12,6 +12,8 @@ const String api_signage_config =  "/api/signage/config";
 const String api_take_survey =  "/survey/takeSurvey?survey=";
 const String api_STOMP_config = "/notifications/config";
 const String api_STOMP_device = "/notifications/signage/device";
+const String api_STOMP_survey = "/notifications/survey/trigger";
+
 
 /// MDNS
 const String mdns_init = "INITIALISING";
@@ -41,6 +43,8 @@ const String dev_config_fail = "App configuration failed. Restart the app";
 const String no_survey_assigned = "No survey assigned";
 const String loading_survey = "Loading Survey";
 const String survey_not_assigned = "Survey not assigned";
+const String survey_disabled = "Survey not enabled";
+const String survey_notAvlbl = "Survey not available" ;
 
 
 
