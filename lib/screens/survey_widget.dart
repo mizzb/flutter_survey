@@ -315,6 +315,9 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       callback: (dynamic frame) {
         if (frame != null) {
           var resp = json.decode(frame.body);
+          print("---> STOMP: Survey notification Invoked");
+          print("Received Device Id:" + resp['deviceId']);
+          print("System Device Id:" + widget.deviceId);
           if(resp['deviceId'] != null && resp['deviceId'] == widget.deviceId){
             setState(() {
               this.surveyFlag = true;
