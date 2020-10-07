@@ -291,6 +291,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
       callback: (dynamic frame) {
+        print(CONSTANTS.api_STOMP_config + "Config invoked");
         if (frame != null) {
           setUpConfig(widget.deviceId);
         }
@@ -300,6 +301,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     client.subscribe(
       destination: CONSTANTS.api_STOMP_device,
       callback: (dynamic frame) {
+        print(CONSTANTS.api_STOMP_device + " Survey invoked");
         if (frame != null) {
           getSurvey(widget.deviceId);
         }
@@ -309,6 +311,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     client.subscribe(
       destination: CONSTANTS.api_STOMP_survey,
       callback: (dynamic frame) {
+        print(CONSTANTS.api_STOMP_survey + "Notification Survey invoked");
         if (frame != null) {
           var resp = json.decode(frame.body);
           print("---> STOMP: Survey notification Invoked");
@@ -383,6 +386,15 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 this.deviceConfig = true;
                 this.surveyEnabled = value.survey.enabled;
               }),
+
+              if (value.survey.enabled)
+                {
+                  print("---> Survey Enabled for " +
+                      value.survey.timeout.toString() +
+                      "Secs")
+                }
+              else
+                {print("--> survey disabled")},
 
               /// load survey if survey not available
               if (!this.deviceSurvey && this.config.survey.enabled)
