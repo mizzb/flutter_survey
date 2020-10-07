@@ -2,7 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_mdns_plugin/flutter_mdns_plugin.dart';
+import 'package:line_awesome_icons/line_awesome_icons.dart';
+import 'package:regexed_validator/regexed_validator.dart';
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:uuid/uuid.dart';
@@ -21,6 +24,7 @@ class MDNSWidget extends StatefulWidget {
 class _MDNSWidgetState extends State<MDNSWidget> {
   var discoveryFlag = CONSTANTS.mdns_init;
   var deviceId;
+  bool _ipError = false;
 
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
@@ -34,9 +38,16 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   List<ServiceInfo> _discoveredServices = <ServiceInfo>[];
   Timer _timer;
 
+  TextEditingController _popUpIPCtrl;
+  TextEditingController _popUpPORTCtrl;
+
+
+
   @override
   initState() {
     super.initState();
+    _popUpIPCtrl = new TextEditingController();
+    _popUpPORTCtrl = new TextEditingController();
     discoveryCallbacks = new DiscoveryCallbacks(
       onDiscovered: (ServiceInfo info) {
         if (mounted)
@@ -64,33 +75,34 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         /// Check if discovered service is Queberry-halo
         if (info.name == CONSTANTS.halo_title &&
             discoveryFlag != CONSTANTS.mdns_resolved) {
-          SharedPreferences prefs = await SharedPreferences.getInstance();
-          if (prefs.getString("deviceId") != null) {
-            print("Id from Shared Pref: " + prefs.getString("deviceId"));
-            setState(() {
-              mdnsDetails = info;
-              deviceId = prefs.getString("deviceId");
-              discoveryFlag = CONSTANTS.mdns_resolved;
-            });
-          } else {
-            var uuid = Uuid();
-            var id = uuid.v4();
-            print("Generated DeviceId: " + id);
-            prefs.setString("deviceId", id);
-            setState(() {
-              mdnsDetails = info;
-              deviceId = prefs.getString("deviceId");
-              discoveryFlag = CONSTANTS.mdns_resolved;
-            });
-          }
+          await configureDeviceId(info);
         }
       },
     );
     _initPackageInfo()
-        .then((value) => {
-          startMdnsDiscovery(CONSTANTS.discovery_service)
-        });
+        .then((value) => {startMdnsDiscovery(CONSTANTS.discovery_service)});
+  }
 
+  Future configureDeviceId(ServiceInfo info) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.getString("deviceId") != null) {
+      print("Id from Shared Pref: " + prefs.getString("deviceId"));
+      setState(() {
+        mdnsDetails = info;
+        deviceId = prefs.getString("deviceId");
+        discoveryFlag = CONSTANTS.mdns_resolved;
+      });
+    } else {
+      var uuid = Uuid();
+      var id = uuid.v4();
+      print("Generated DeviceId: " + id);
+      prefs.setString("deviceId", id);
+      setState(() {
+        mdnsDetails = info;
+        deviceId = prefs.getString("deviceId");
+        discoveryFlag = CONSTANTS.mdns_resolved;
+      });
+    }
   }
 
   @override
@@ -113,6 +125,113 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                     style: TextStyle(fontSize: 13, color: Colors.white70)),
             ],
           )),
+          actions: [
+            Container(
+              child: Column(
+                children: [
+                  GestureDetector(
+                      child: Container(
+                        child: Icon(LineAwesomeIcons.cog),
+                      ),
+                      onLongPress: () {
+                        showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: Text("Enter the Server details"),
+                                content: Container(
+                                  width:
+                                      MediaQuery.of(context).size.width * 0.7,
+                                  child: Form(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Padding(
+                                          padding: EdgeInsets.all(5.0),
+                                          child: TextFormField(
+                                            controller: this._popUpIPCtrl,
+                                            keyboardType: TextInputType.number,
+                                            decoration: InputDecoration(
+                                                border: new OutlineInputBorder(
+                                                    borderSide: new BorderSide(
+                                                  color: Color.fromRGBO(
+                                                      45, 51, 62, 1),
+                                                )),
+                                                labelText: "IP Address",
+                                            ),
+
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.all(5.0),
+                                          child: TextFormField(
+                                            inputFormatters: [
+                                              LengthLimitingTextInputFormatter(4),
+                                            ],
+                                            controller: this._popUpPORTCtrl,
+                                            keyboardType: TextInputType.number,
+                                            decoration: InputDecoration(
+                                                border: new OutlineInputBorder(
+                                                    borderSide: new BorderSide(
+                                                  color: Color.fromRGBO(
+                                                      45, 51, 62, 1),
+                                                )),
+                                                labelText: "PORT"),
+                                          ),
+                                        ),
+
+                                        if(this._ipError)
+                                          Padding(
+                                            padding: EdgeInsets.all(5.0),
+                                            child: Text("Please enter valid details"),
+                                          ),
+
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                actions: [
+                                  RaisedButton(
+                                    child: Text("Save"),
+                                    onPressed: () {
+                                      if(this._popUpIPCtrl.text != null && this._popUpIPCtrl.text != ""
+                                          && this._popUpPORTCtrl.text != null && this._popUpPORTCtrl.text != ""){
+                                        if(validator.ip(this._popUpIPCtrl.text)){
+                                          ServiceInfo info = new ServiceInfo(null,
+                                              null, null, null, this._popUpIPCtrl.text, int.parse(this._popUpPORTCtrl.text));
+                                          configureDeviceId(info);
+                                          Navigator.of(context).pop();
+                                        }else {
+                                          setState(() {
+                                            this._ipError = true;
+                                          });
+                                        }
+                                      }else {
+                                        setState(() {
+                                          this._ipError = true;
+                                        });
+                                      }
+                                    },
+                                  ),
+                                  RaisedButton(
+                                    child: Text("Cancel"),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                      setState(() {
+                                        this._ipError = false;
+                                      });
+                                      this._popUpIPCtrl.clear();
+                                      this._popUpPORTCtrl.clear();
+                                    },
+                                  )
+                                ],
+                              );
+                            });
+                      })
+                ],
+              ),
+            )
+          ],
         ),
         body: loadBody());
   }
@@ -120,7 +239,8 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   startMdnsDiscovery(String serviceType) {
     print("MDNS INIT FOR " + serviceType);
     _mdnsPlugin = new FlutterMdnsPlugin(discoveryCallbacks: discoveryCallbacks);
-    this._timer = Timer(Duration(seconds: 3), () => _mdnsPlugin.startDiscovery(serviceType));
+    this._timer = Timer(
+        Duration(seconds: 3), () => _mdnsPlugin.startDiscovery(serviceType));
   }
 
   void reassemble() {
@@ -196,7 +316,6 @@ class _MDNSWidgetState extends State<MDNSWidget> {
       _packageInfo = info;
     });
   }
-
 
 //
 //  /// MDNS TEST

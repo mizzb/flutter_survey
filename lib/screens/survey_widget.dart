@@ -3,8 +3,10 @@ import 'dart:convert';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/painting.dart';
 
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
+import 'package:line_awesome_icons/line_awesome_icons.dart';
 import 'package:package_info/package_info.dart';
 import 'package:queberry_feedback/model/Config.dart';
 import 'package:queberry_feedback/model/Survey.dart';
@@ -107,33 +109,37 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
             ],
           )),
           actions: <Widget>[
-            Container(
-                padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width * 0.05),
-                child: Center(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Device Id: " + widget.deviceId,
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 16)),
-                      if (this.deviceConnection)
-                        Text(
-                          "Connected to Halo",
-                          style: TextStyle(color: Colors.green, fontSize: 15),
-                        )
-                      else
-                        Text(
-                          "Halo not available",
-                          style: TextStyle(color: Colors.red, fontSize: 15),
-                        )
-                    ],
-                  ),
-                )),
+            Row(
+              children: [
+                Container(
+                    padding: EdgeInsets.symmetric(
+                        horizontal: MediaQuery.of(context).size.width * 0.03),
+                    child: Center(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text("Device Id: " + widget.deviceId,
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 16)),
+                          if (this.deviceConnection)
+                            Text(
+                              "Connected to Halo",
+                              style:
+                                  TextStyle(color: Colors.green, fontSize: 15),
+                            )
+                          else
+                            Text(
+                              "Halo not available",
+                              style: TextStyle(color: Colors.red, fontSize: 15),
+                            )
+                        ],
+                      ),
+                    )),
+              ],
+            ),
           ],
         ),
-
         body: SingleChildScrollView(
             child: Container(
                 height: MediaQuery.of(context).size.height * 0.9,
@@ -191,7 +197,10 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   Widget buildSurveyView() {
-    if (this.deviceSurvey && assignedSurveyId != null && this.surveyEnabled && this.surveyFlag) {
+    if (this.deviceSurvey &&
+        assignedSurveyId != null &&
+        this.surveyEnabled &&
+        this.surveyFlag) {
       startSurveyTimer(); // start timer
       return new WebviewScaffold(
           url: this.baseUrl + this.surveyUrl,
@@ -221,29 +230,28 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         width: MediaQuery.of(context).size.width,
         height: MediaQuery.of(context).size.height,
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: getSurveyError()
-        ),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: getSurveyError()),
       );
     }
   }
 
   List<Widget> getSurveyError() {
     List<Widget> childrens = [];
-    if(!this.deviceSurvey && assignedSurveyId == null){
+    if (!this.deviceSurvey && assignedSurveyId == null) {
       childrens.add(LottieWidget(lottieType: "no_survey"));
-      childrens.add( Container(
+      childrens.add(Container(
         child: getSurveyMessage(CONSTANTS.survey_not_assigned),
       ));
-    }else if(!this.surveyEnabled){
+    } else if (!this.surveyEnabled) {
       childrens.add(LottieWidget(lottieType: "no_survey"));
-      childrens.add( Container(
+      childrens.add(Container(
         child: getSurveyMessage(CONSTANTS.survey_disabled),
       ));
-    }else {
+    } else {
       childrens.add(LottieWidget(lottieType: "sleeping_cat"));
-      childrens.add( Container(
-        child: getSurveyMessage(CONSTANTS.survey_notAvlbl),
+      childrens.add(Container(
+        child: getSurveyMessage(this.config.survey.message),
       ));
     }
 
@@ -251,16 +259,15 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   Text getSurveyMessage(String message) {
-      return Text(
-        message,
-        style: TextStyle(
-            fontWeight: FontWeight.normal,
-            fontSize: 25,
-            color: Colors.blueGrey,
-            decoration: TextDecoration.none),
-      );
+    return Text(
+      message,
+      style: TextStyle(
+          fontWeight: FontWeight.normal,
+          fontSize: 25,
+          color: Colors.blueGrey,
+          decoration: TextDecoration.none),
+    );
   }
-
 
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
@@ -318,7 +325,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
           print("---> STOMP: Survey notification Invoked");
           print("Received Device Id:" + resp['deviceId']);
           print("System Device Id:" + widget.deviceId);
-          if(resp['deviceId'] != null && resp['deviceId'] == widget.deviceId){
+          if (resp['deviceId'] != null && resp['deviceId'] == widget.deviceId) {
             setState(() {
               this.surveyFlag = true;
             });
@@ -346,11 +353,12 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                             (value.statusCode == 200 ||
                                 value.statusCode == 201))
                           {
-                            if(!this.deviceConnection){
-                              setState(() {
-                                this.deviceConnection = true;
-                              })
-                            }
+                            if (!this.deviceConnection)
+                              {
+                                setState(() {
+                                  this.deviceConnection = true;
+                                })
+                              }
                           }
                         else
                           {
@@ -384,24 +392,19 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
               setState(() {
                 this.config = value;
                 this.deviceConfig = true;
+                this.surveyEnabled = value.survey.enabled;
               }),
 
+
               /// load survey if survey not available
-              if (!this.deviceSurvey && this.config.survey.enabled)
-                {
-                  this.surveyEnabled = true,
+              if (!this.deviceSurvey && this.config.survey.enabled){
                   getSurvey(deviceId),
-                }
-              else
-                {
-                  this.surveyEnabled = false
-                },
+              },
 
               /// set up STOMP if not configured
-              if (!this.STOMPInit)
-                {
+              if (!this.STOMPInit){
                   setUpConfigSocket(deviceId),
-                },
+              },
             },
         onError: (error) => {
               setState(() {
@@ -498,6 +501,4 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       _packageInfo = info;
     });
   }
-
-
 }
