@@ -12,13 +12,12 @@ import '../lottie_widget.dart';
 
 class HomeWidget extends StatefulWidget {
   final deviceId;
-  final serverIp;
-  final portNumber;
+  final Key key;
+
+  final serverUrl;
 
   const HomeWidget(
-      {@required this.deviceId,
-      @required this.serverIp,
-      @required this.portNumber});
+      {@required this.deviceId, @required this.key, @required this.serverUrl});
 
   @override
   _HomeWidgetState createState() => _HomeWidgetState();
@@ -36,19 +35,21 @@ class _HomeWidgetState extends State<HomeWidget> {
   @override
   initState() {
     super.initState();
-    this.baseUrl = "http://" + widget.serverIp.toString() + ":" + widget.portNumber.toString();
+    registerStatus = CONSTANTS.dev_reg_init;
+    pairStatus = CONSTANTS.dev_pair_init;
+    pairFlag = false;
+    registerFlag = false;
+    this.baseUrl = widget.serverUrl;
   }
 
   @override
   void dispose() {
-    if(_timer != null)
-      _timer.cancel();
+    if (_timer != null) _timer.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-
     /// Make API call to register the device
     if (this.registerStatus == CONSTANTS.dev_reg_init) {
       registerDevice(widget.deviceId);
@@ -58,7 +59,7 @@ class _HomeWidgetState extends State<HomeWidget> {
     /// and start checking if the device is paired.
     /// If paired reditect to Survey widget
     if (this.registerFlag) {
-      checkIfPaired(widget.deviceId, widget.serverIp, widget.portNumber);
+      checkIfPaired(widget.deviceId);
     }
 
     return Center(
@@ -76,7 +77,10 @@ class _HomeWidgetState extends State<HomeWidget> {
                 padding: EdgeInsets.all(5),
                 child: Text(
                   "DEVICE ID: " + widget.deviceId,
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: Color.fromRGBO(45, 51, 62, 1)),
+                  style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
               ),
               SizedBox(
@@ -86,17 +90,20 @@ class _HomeWidgetState extends State<HomeWidget> {
                 padding: EdgeInsets.all(5),
                 child: Text(
                   this.registerStatus,
-                  style: TextStyle(fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
+                  style: TextStyle(
+                      fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
               ),
+
               /// If device registered, show device paring status
               if (this.registerStatus == CONSTANTS.dev_reg_completed)
                 Column(
                   children: [
                     Container(
                       child: Text(
-                       this.pairStatus,
-                        style: TextStyle(fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
+                        this.pairStatus,
+                        style: TextStyle(
+                            fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
                       ),
                     ),
                     Container(child: LottieWidget(lottieType: "loading_bubble"))
@@ -107,12 +114,10 @@ class _HomeWidgetState extends State<HomeWidget> {
         ),
       ),
     );
-
   }
 
   void registerDevice(deviceID) {
     if (deviceID != null && this.baseUrl != null) {
-
       var api = this.baseUrl + CONSTANTS.api_device_register;
 
       Map<String, String> requestHeaders = {
@@ -159,18 +164,24 @@ class _HomeWidgetState extends State<HomeWidget> {
     }
   }
 
-  void checkIfPaired(deviceId, serverIp, portNumber) {
-
+  void checkIfPaired(deviceId) {
     Map<String, String> headers = {
       'device-id': deviceId.toString(),
     };
 
     var api = this.baseUrl + CONSTANTS.api_device_status;
 
+    if (this._timer != null && this._timer.isActive) {
+      this._timer.cancel();
+    }
+
     this._timer = new Timer.periodic(new Duration(seconds: 10), (timer) {
       if (this.pairFlag) {
-        _timer.cancel();
         timer.cancel();
+
+        if (this._timer != null && this._timer.isActive) {
+          this._timer.cancel();
+        }
       }
 
       checkPair(api, headers).then(
@@ -181,7 +192,7 @@ class _HomeWidgetState extends State<HomeWidget> {
                     this.pairFlag = true,
                     this.pairStatus = CONSTANTS.dev_paired,
                     timer.cancel(),
-                    _timer.cancel(),
+                    if (this._timer != null && this._timer.isActive) {this._timer.cancel()},
 
                     /// call reject api to reject other devices
                     callReject(api, headers)
@@ -196,13 +207,12 @@ class _HomeWidgetState extends State<HomeWidget> {
                   }
               },
           onError: (error) => {
-            this.pairStatus = CONSTANTS.dev_pair_fail,
-            setState(() {
-              this.pairFlag = false;
-            })
-          });
+                this.pairStatus = CONSTANTS.dev_pair_fail,
+                setState(() {
+                  this.pairFlag = false;
+                })
+              });
     });
-
   }
 
   void callReject(String api, headers) {
@@ -213,9 +223,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                       builder: (context) => SurveyViewWidget(
-                          deviceId: widget.deviceId,
-                          serverIp: widget.serverIp,
-                          portNumber: widget.portNumber)),
+                          deviceId: widget.deviceId, serverUrl: this.baseUrl)),
                   (Route<dynamic> route) => false),
             },
         onError: (error) => {print(error)});

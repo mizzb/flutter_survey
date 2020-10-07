@@ -24,7 +24,7 @@ class MDNSWidget extends StatefulWidget {
 class _MDNSWidgetState extends State<MDNSWidget> {
   var discoveryFlag = CONSTANTS.mdns_init;
   var deviceId;
-  bool _ipError = false;
+  var serverUrl;
 
   PackageInfo _packageInfo = PackageInfo(
     appName: 'Unknown',
@@ -37,17 +37,13 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   DiscoveryCallbacks discoveryCallbacks;
   List<ServiceInfo> _discoveredServices = <ServiceInfo>[];
   Timer _timer;
-
-  TextEditingController _popUpIPCtrl;
-  TextEditingController _popUpPORTCtrl;
-
-
+  bool _ipError = false;
+  TextEditingController _popUpCtrl;
 
   @override
   initState() {
     super.initState();
-    _popUpIPCtrl = new TextEditingController();
-    _popUpPORTCtrl = new TextEditingController();
+    _popUpCtrl = new TextEditingController();
     discoveryCallbacks = new DiscoveryCallbacks(
       onDiscovered: (ServiceInfo info) {
         if (mounted)
@@ -75,7 +71,11 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         /// Check if discovered service is Queberry-halo
         if (info.name == CONSTANTS.halo_title &&
             discoveryFlag != CONSTANTS.mdns_resolved) {
-          await configureDeviceId(info);
+          var url = "http://" + info.address + ":" + info.port.toString();
+          setState(() {
+            mdnsDetails = info;
+          });
+          await configureDeviceId(url);
         }
       },
     );
@@ -83,30 +83,35 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         .then((value) => {startMdnsDiscovery(CONSTANTS.discovery_service)});
   }
 
-  Future configureDeviceId(ServiceInfo info) async {
+  Future configureDeviceId(String url) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    if (prefs.getString("deviceId") != null) {
-      print("Id from Shared Pref: " + prefs.getString("deviceId"));
-      setState(() {
-        mdnsDetails = info;
-        deviceId = prefs.getString("deviceId");
-        discoveryFlag = CONSTANTS.mdns_resolved;
-      });
+    if (url == null || url == "") {
+      print("Url generation failed");
     } else {
-      var uuid = Uuid();
-      var id = uuid.v4();
-      print("Generated DeviceId: " + id);
-      prefs.setString("deviceId", id);
-      setState(() {
-        mdnsDetails = info;
-        deviceId = prefs.getString("deviceId");
-        discoveryFlag = CONSTANTS.mdns_resolved;
-      });
+      if (prefs.getString("deviceId") != null) {
+        print("Id from Shared Pref: " + prefs.getString("deviceId"));
+        setState(() {
+          this.deviceId = prefs.getString("deviceId");
+          this.serverUrl = url;
+          this.discoveryFlag = CONSTANTS.mdns_resolved;
+        });
+      } else {
+        var uuid = Uuid();
+        var id = uuid.v4();
+        print("Generated DeviceId: " + id);
+        prefs.setString("deviceId", id);
+        setState(() {
+          this.deviceId = prefs.getString("deviceId");
+          this.serverUrl = url;
+          this.discoveryFlag = CONSTANTS.mdns_resolved;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
+    this._popUpCtrl.dispose();
     this._mdnsPlugin.stopDiscovery();
     this._timer.cancel();
     super.dispose();
@@ -127,13 +132,19 @@ class _MDNSWidgetState extends State<MDNSWidget> {
           )),
           actions: [
             Container(
+              padding: EdgeInsets.all(5),
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   GestureDetector(
                       child: Container(
-                        child: Icon(LineAwesomeIcons.cog),
+                        child: Icon(
+                          LineAwesomeIcons.cog,
+                          color: Colors.grey,
+                        ),
                       ),
                       onLongPress: () {
+                        this._popUpCtrl.text = this.serverUrl;
                         showDialog(
                             context: context,
                             builder: (BuildContext context) {
@@ -149,43 +160,23 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                         Padding(
                                           padding: EdgeInsets.all(5.0),
                                           child: TextFormField(
-                                            controller: this._popUpIPCtrl,
-                                            keyboardType: TextInputType.number,
+                                            controller: this._popUpCtrl,
                                             decoration: InputDecoration(
-                                                border: new OutlineInputBorder(
-                                                    borderSide: new BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      45, 51, 62, 1),
-                                                )),
-                                                labelText: "IP Address",
+                                              border: new OutlineInputBorder(
+                                                  borderSide: new BorderSide(
+                                                color: Color.fromRGBO(
+                                                    45, 51, 62, 1),
+                                              )),
+                                              labelText: "Server URL",
                                             ),
-
                                           ),
                                         ),
-                                        Padding(
-                                          padding: EdgeInsets.all(5.0),
-                                          child: TextFormField(
-                                            inputFormatters: [
-                                              LengthLimitingTextInputFormatter(4),
-                                            ],
-                                            controller: this._popUpPORTCtrl,
-                                            keyboardType: TextInputType.number,
-                                            decoration: InputDecoration(
-                                                border: new OutlineInputBorder(
-                                                    borderSide: new BorderSide(
-                                                  color: Color.fromRGBO(
-                                                      45, 51, 62, 1),
-                                                )),
-                                                labelText: "PORT"),
-                                          ),
-                                        ),
-
-                                        if(this._ipError)
+                                        if (this._ipError)
                                           Padding(
                                             padding: EdgeInsets.all(5.0),
-                                            child: Text("Please enter valid details"),
+                                            child:
+                                                Text("Please enter valid url"),
                                           ),
-
                                       ],
                                     ),
                                   ),
@@ -194,22 +185,19 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                   RaisedButton(
                                     child: Text("Save"),
                                     onPressed: () {
-                                      if(this._popUpIPCtrl.text != null && this._popUpIPCtrl.text != ""
-                                          && this._popUpPORTCtrl.text != null && this._popUpPORTCtrl.text != ""){
-                                        if(validator.ip(this._popUpIPCtrl.text)){
-                                          ServiceInfo info = new ServiceInfo(null,
-                                              null, null, null, this._popUpIPCtrl.text, int.parse(this._popUpPORTCtrl.text));
-                                          configureDeviceId(info);
-                                          Navigator.of(context).pop();
-                                        }else {
-                                          setState(() {
-                                            this._ipError = true;
-                                          });
-                                        }
-                                      }else {
+                                      if ((this._popUpCtrl.text == null || this._popUpCtrl.text == "" ) ||
+                                          !validator.url(this._popUpCtrl.text)) {
                                         setState(() {
                                           this._ipError = true;
                                         });
+                                      } else {
+
+                                        setState(() {
+                                          this._ipError = false;
+                                        });
+                                        configureDeviceId(this._popUpCtrl.text);
+                                        this._popUpCtrl.clear();
+                                        Navigator.of(context).pop();
                                       }
                                     },
                                   ),
@@ -220,8 +208,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                       setState(() {
                                         this._ipError = false;
                                       });
-                                      this._popUpIPCtrl.clear();
-                                      this._popUpPORTCtrl.clear();
+                                      this._popUpCtrl.clear();
                                     },
                                   )
                                 ],
@@ -297,11 +284,9 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   Widget loadBody() {
     /// load HOME if resolved and deviceId generated
     if (this.discoveryFlag == CONSTANTS.mdns_resolved &&
-        this.deviceId != null) {
+        this.deviceId != null && !(this.serverUrl == null || this.serverUrl == "")) {
       return HomeWidget(
-          deviceId: this.deviceId,
-          serverIp: mdnsDetails.address,
-          portNumber: mdnsDetails.port);
+          key: UniqueKey(), deviceId: this.deviceId, serverUrl: this.serverUrl);
     } else {
       return Center(
           child: Column(
@@ -316,25 +301,4 @@ class _MDNSWidgetState extends State<MDNSWidget> {
       _packageInfo = info;
     });
   }
-
-//
-//  /// MDNS TEST
-//  Future<void> fetchServer(String name) async {
-//
-//
-//
-//
-//    final MDnsClient client = MDnsClient();
-//    await client.start();
-//    await for (IPAddressResourceRecord record in client
-//        .lookup<IPAddressResourceRecord>(ResourceRecordQuery.addressIPv4(name))) {
-//      print('Found address (${record.address}).');
-//    }
-//
-//    await for (IPAddressResourceRecord record in client
-//        .lookup<IPAddressResourceRecord>(ResourceRecordQuery.addressIPv6(name))) {
-//      print('Found address (${record.address}).');
-//    }
-//    client.stop();
-//  }
 }

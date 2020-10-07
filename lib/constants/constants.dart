@@ -7,13 +7,12 @@ const String halo_title = "queberry-halo";
 ///API's
 const String api_device_status = "/api/device";
 const String api_device_register = "/api/devices/register";
-const String api_device_survey =  "/api/device/survey";
-const String api_signage_config =  "/api/signage/config";
-const String api_take_survey =  "/survey/takeSurvey?survey=";
+const String api_device_survey = "/api/device/survey";
+const String api_signage_config = "/api/signage/config";
+const String api_take_survey = "/survey/takeSurvey?survey=";
 const String api_STOMP_config = "/notifications/config";
 const String api_STOMP_device = "/notifications/signage/device";
 const String api_STOMP_survey = "/notifications/survey/trigger";
-
 
 /// MDNS
 const String mdns_init = "INITIALISING";
@@ -44,8 +43,4 @@ const String no_survey_assigned = "No survey assigned";
 const String loading_survey = "Loading Survey";
 const String survey_not_assigned = "Survey not assigned";
 const String survey_disabled = "Survey not enabled";
-const String survey_notAvlbl = "Survey not available" ;
-
-
-
-
+const String survey_notAvlbl = "Survey not available";

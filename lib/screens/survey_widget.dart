@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
-import 'package:line_awesome_icons/line_awesome_icons.dart';
 import 'package:package_info/package_info.dart';
 import 'package:queberry_feedback/model/Config.dart';
 import 'package:queberry_feedback/model/Survey.dart';
@@ -20,13 +19,9 @@ import '../lottie_widget.dart';
 
 class SurveyViewWidget extends StatefulWidget {
   final deviceId;
-  final serverIp;
-  final portNumber;
+  final serverUrl;
 
-  const SurveyViewWidget(
-      {@required this.deviceId,
-      @required this.serverIp,
-      @required this.portNumber});
+  const SurveyViewWidget({@required this.deviceId, @required this.serverUrl});
 
   @override
   _WebViewWidgetState createState() => _WebViewWidgetState();
@@ -73,10 +68,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   @override
   initState() {
     super.initState();
-    this.baseUrl = "http://" +
-        widget.serverIp.toString() +
-        ":" +
-        widget.portNumber.toString();
+    this.baseUrl = widget.serverUrl;
     _initPackageInfo();
 
     /// Fetch device config, configure STOMP and fetch survey
@@ -271,11 +263,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
-    var socketUrl = "ws://" +
-        widget.serverIp.toString() +
-        ":" +
-        widget.portNumber.toString() +
-        "/push";
+    var uri = Uri.parse(this.baseUrl);
+    var socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
 
     final stompClient = StompClient(
         config: StompConfig(
@@ -395,16 +384,17 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 this.surveyEnabled = value.survey.enabled;
               }),
 
-
               /// load survey if survey not available
-              if (!this.deviceSurvey && this.config.survey.enabled){
+              if (!this.deviceSurvey && this.config.survey.enabled)
+                {
                   getSurvey(deviceId),
-              },
+                },
 
               /// set up STOMP if not configured
-              if (!this.STOMPInit){
+              if (!this.STOMPInit)
+                {
                   setUpConfigSocket(deviceId),
-              },
+                },
             },
         onError: (error) => {
               setState(() {
