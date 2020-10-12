@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,9 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   Timer _surveyTimer;
 
   Config config;
+  HttpClient client = new HttpClient();
+
+  StompClient stompClient;
 
   @override
   void dispose() {
@@ -68,6 +72,10 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   @override
   initState() {
     super.initState();
+
+    client.badCertificateCallback =
+        ((X509Certificate cert, String host, int port) => true);
+
     this.baseUrl = widget.serverUrl;
     _initPackageInfo();
 
@@ -155,7 +163,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                 style: TextStyle(
                     fontWeight: FontWeight.normal,
                     fontSize: 25,
-                    color: Colors.white70,
+                    color: Colors.grey,
                     decoration: TextDecoration.none),
               ),
             )
@@ -264,22 +272,47 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
     var uri = Uri.parse(this.baseUrl);
+
     var socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
 
-    final stompClient = StompClient(
+    this.stompClient = new StompClient(
         config: StompConfig(
       url: socketUrl,
       onConnect: onConnect,
       onWebSocketError: (dynamic error) => {
-        setState(() {
-          this.STOMPInit = false;
-          this.deviceConfigStatus = CONSTANTS.dev_config_fail;
-        }),
+        print(error),
+      },
+      onStompError: (dynamic error) => {
+        print(error),
+      },
+      onDisconnect: (dynamic error) => {
+        print(error),
+      },
+      onUnhandledFrame: (dynamic error) => {
+        print(error),
+      },
+      onUnhandledMessage: (dynamic error) => {
+        print(error),
+      },
+      onUnhandledReceipt: (dynamic error) => {
+        print(error),
+      },
+      onWebSocketDone: () => {
+
+        print("STOMP Done"),
+        this.stompClient.deactivate()
+
+      },
+      onDebugMessage: (dynamic error) => {
+        print(error),
       },
     ));
 
     stompClient.activate();
+
   }
+
+
 
   /// On STOMP Connect
   onConnect(StompClient client, StompFrame frame) {
@@ -291,7 +324,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
       callback: (dynamic frame) {
-        print(CONSTANTS.api_STOMP_config + "Config invoked");
+        print(CONSTANTS.api_STOMP_config + " Config changes invoked");
         if (frame != null) {
           setUpConfig(widget.deviceId);
         }
@@ -301,7 +334,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     client.subscribe(
       destination: CONSTANTS.api_STOMP_device,
       callback: (dynamic frame) {
-        print(CONSTANTS.api_STOMP_device + " Survey invoked");
+        print(CONSTANTS.api_STOMP_device + " Survey changes invoked");
         if (frame != null) {
           getSurvey(widget.deviceId);
         }
@@ -339,17 +372,25 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         Duration(seconds: 10),
         (Timer t) => {
               print("checking halo status"),
-              getDeviceStatus(url, headers).then(
+              getDeviceStatus(url, headers, deviceId.toString()).then(
                   (value) => {
-                        if (value != null &&
-                            (value.statusCode == 200 ||
-                                value.statusCode == 201))
+                        if (value != null && (value == 200 || value == 201))
                           {
                             if (!this.deviceConnection)
                               {
+                                if (this.devConnectionStatus ==
+                                        CONSTANTS.dev_conn_fail &&
+                                    this.deviceConfig &&
+                                    this.STOMPInit)
+                                  {
+                                    setUpConfig(deviceId),
+                                    setUpConfigSocket(deviceId),
+                                  },
                                 setState(() {
                                   this.deviceConnection = true;
-                                })
+                                  this.devConnectionStatus =
+                                      CONSTANTS.dev_conn_init;
+                                }),
                               }
                           }
                         else
@@ -377,36 +418,48 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Method for loading initial config and to set up STOMP
   void setUpConfig(deviceId) {
     var url = this.baseUrl + CONSTANTS.api_signage_config;
-
-    getDevConfig(url).then(
+    Map<String, String> headers = {
+      'device-id': deviceId.toString(),
+    };
+    getDevConfig(url, headers, deviceId.toString()).then(
         (value) => {
-              /// set config flag
-              setState(() {
-                this.config = value;
-                this.deviceConfig = true;
-                this.surveyEnabled = value.survey.enabled;
-              }),
-
-              if (value.survey.enabled)
+              if (value != null)
                 {
-                  print("---> Survey Enabled for " +
-                      value.survey.timeout.toString() +
-                      "Secs")
+                  /// set config flag
+                  setState(() {
+                    this.config = value;
+                    this.deviceConfig = true;
+                    this.surveyEnabled = value.survey.enabled;
+                  }),
+
+                  if (value.survey.enabled)
+                    {
+                      print("---> Survey Enabled for " +
+                          value.survey.timeout.toString() +
+                          "Secs")
+                    }
+                  else
+                    {print("--> survey disabled")},
+
+                  /// load survey if survey not available
+                  if (!this.deviceSurvey && this.config.survey.enabled)
+                    {
+                      getSurvey(deviceId),
+                    },
+
+                  /// set up STOMP if not configured
+                  if (!this.STOMPInit)
+                    {
+                      setUpConfigSocket(deviceId),
+                    },
                 }
               else
-                {print("--> survey disabled")},
-
-              /// load survey if survey not available
-              if (!this.deviceSurvey && this.config.survey.enabled)
                 {
-                  getSurvey(deviceId),
-                },
-
-              /// set up STOMP if not configured
-              if (!this.STOMPInit)
-                {
-                  setUpConfigSocket(deviceId),
-                },
+                  setState(() {
+                    this.deviceConfigStatus = CONSTANTS.dev_config_fail;
+                    this.deviceConfig = false;
+                  }),
+                }
             },
         onError: (error) => {
               setState(() {
@@ -424,9 +477,9 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       'device-id': deviceId.toString(),
     };
 
-    getDevSurvey(url, headers).then(
+    getDevSurvey(url, headers, deviceId.toString()).then(
         (value) => {
-              if (value.id != null)
+              if (value != null && value.id != null)
                 {
                   setState(() {
                     this.assignedSurveyId = value.id;
@@ -461,13 +514,15 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     });
   }
 
-  Future<http.Response> getDeviceStatus(
-      String api, Map<String, String> requestHeaders) async {
+  Future<dynamic> getDeviceStatus(
+      String api, Map<String, String> requestHeaders, deviceId) async {
     try {
-      final response = await http.get(api, headers: requestHeaders);
-      if ((response.statusCode == 200 || response.statusCode == 201) &&
-          response.body != null) {
-        return response;
+      HttpClientRequest request = await client.getUrl(Uri.parse(api));
+      request.headers.set('device-id', deviceId);
+      HttpClientResponse response = await request.close();
+
+      if ((response.statusCode == 200 || response.statusCode == 201)) {
+        return response.statusCode;
       } else {
         return null;
       }
@@ -477,23 +532,38 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   Future<Survey> getDevSurvey(
-      String api, Map<String, String> requestHeaders) async {
-    final response = await http.get(api, headers: requestHeaders);
-    if ((response.statusCode == 200 || response.statusCode == 201) &&
-        response.body != null) {
-      return Survey.fromJson(json.decode(response.body));
-    } else {
-      return new Survey();
+      String api, Map<String, String> requestHeaders, deviceId) async {
+    try {
+      HttpClientRequest request = await client.getUrl(Uri.parse(api));
+      request.headers.set('device-id', deviceId);
+      HttpClientResponse response = await request.close();
+
+      if ((response.statusCode == 200 || response.statusCode == 201)) {
+        var reply = await response.transform(utf8.decoder).join();
+        return Survey.fromJson(json.decode(reply));
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
     }
   }
 
-  Future<Config> getDevConfig(String api) async {
-    final response = await http.get(api);
-    if ((response.statusCode == 200 || response.statusCode == 201) &&
-        response.body != null) {
-      return Config.fromJson(json.decode(response.body));
-    } else {
-      return new Config();
+  Future<Config> getDevConfig(
+      String api, Map<String, String> headers, deviceId) async {
+    try {
+      HttpClientRequest request = await client.getUrl(Uri.parse(api));
+      request.headers.set('device-id', deviceId);
+      HttpClientResponse response = await request.close();
+
+      if ((response.statusCode == 200 || response.statusCode == 201)) {
+        var reply = await response.transform(utf8.decoder).join();
+        return Config.fromJson(json.decode(reply));
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
     }
   }
 

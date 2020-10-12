@@ -36,32 +36,40 @@ class Config {
   String mode;
 
   factory Config.fromJson(Map<String, dynamic> json) => Config(
-    audio: Audio.fromJson(json["audio"]),
-    dispenser: Dispenser.fromJson(json["dispenser"]),
-    queue: Queue.fromJson(json["queue"]),
-    theme: Theme.fromJson(json["theme"]),
-    token: Token.fromJson(json["token"]),
-    sms: Sms.fromJson(json["sms"]),
-    survey: SurveyConf.fromJson(json["survey"]),
-    home: Home.fromJson(json["home"]),
-    time: DateTime.parse(json["time"]),
-    activeProfiles: List<String>.from(json["activeProfiles"].map((x) => x)),
-    mode: json["mode"],
-  );
+        audio: Audio.fromJson(json["audio"]),
+        dispenser: Dispenser.fromJson(json["dispenser"]),
+        queue: Queue.fromJson(json["queue"]),
+        theme: Theme.fromJson(json["theme"]),
+        token: Token.fromJson(json["token"]),
+        sms: Sms.fromJson(json["sms"]),
+        survey: (json["survey"] != null)
+            ? SurveyConf.fromJson(json["survey"])
+            : new SurveyConf(
+                id: "",
+                version: 123,
+                enabled: false,
+                timeout: 30,
+                message: "Waiting for survey",
+                trigger: ""),
+        home: Home.fromJson(json["home"]),
+        time: DateTime.parse(json["time"]),
+        activeProfiles: List<String>.from(json["activeProfiles"].map((x) => x)),
+        mode: json["mode"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "audio": audio.toJson(),
-    "dispenser": dispenser.toJson(),
-    "queue": queue.toJson(),
-    "theme": theme.toJson(),
-    "token": token.toJson(),
-    "sms": sms.toJson(),
-    "survey": survey.toJson(),
-    "home": home.toJson(),
-    "time": time.toIso8601String(),
-    "activeProfiles": List<dynamic>.from(activeProfiles.map((x) => x)),
-    "mode": mode,
-  };
+        "audio": audio.toJson(),
+        "dispenser": dispenser.toJson(),
+        "queue": queue.toJson(),
+        "theme": theme.toJson(),
+        "token": token.toJson(),
+        "sms": sms.toJson(),
+        "survey": survey.toJson(),
+        "home": home.toJson(),
+        "time": time.toIso8601String(),
+        "activeProfiles": List<dynamic>.from(activeProfiles.map((x) => x)),
+        "mode": mode,
+      };
 }
 
 class Audio {
@@ -74,14 +82,14 @@ class Audio {
   bool announcement;
 
   factory Audio.fromJson(Map<String, dynamic> json) => Audio(
-    bell: json["bell"],
-    announcement: json["announcement"],
-  );
+        bell: json["bell"],
+        announcement: json["announcement"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "bell": bell,
-    "announcement": announcement,
-  };
+        "bell": bell,
+        "announcement": announcement,
+      };
 }
 
 class Dispenser {
@@ -104,24 +112,24 @@ class Dispenser {
   bool showBarcode;
 
   factory Dispenser.fromJson(Map<String, dynamic> json) => Dispenser(
-    welcomeMessage: json["welcomeMessage"],
-    numberOfTokens: json["numberOfTokens"],
-    showClock: json["showClock"],
-    messageAfterBusinessHours: json["messageAfterBusinessHours"],
-    blurBackground: json["blurBackground"],
-    enableServiceGroup: json["enableServiceGroup"],
-    showBarcode: json["showBarcode"],
-  );
+        welcomeMessage: json["welcomeMessage"],
+        numberOfTokens: json["numberOfTokens"],
+        showClock: json["showClock"],
+        messageAfterBusinessHours: json["messageAfterBusinessHours"],
+        blurBackground: json["blurBackground"],
+        enableServiceGroup: json["enableServiceGroup"],
+        showBarcode: json["showBarcode"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "welcomeMessage": welcomeMessage,
-    "numberOfTokens": numberOfTokens,
-    "showClock": showClock,
-    "messageAfterBusinessHours": messageAfterBusinessHours,
-    "blurBackground": blurBackground,
-    "enableServiceGroup": enableServiceGroup,
-    "showBarcode": showBarcode,
-  };
+        "welcomeMessage": welcomeMessage,
+        "numberOfTokens": numberOfTokens,
+        "showClock": showClock,
+        "messageAfterBusinessHours": messageAfterBusinessHours,
+        "blurBackground": blurBackground,
+        "enableServiceGroup": enableServiceGroup,
+        "showBarcode": showBarcode,
+      };
 }
 
 class Home {
@@ -150,30 +158,30 @@ class Home {
   String rabbitMqpassword;
 
   factory Home.fromJson(Map<String, dynamic> json) => Home(
-    name: json["name"],
-    enterpriseUrl: json["enterpriseURL"],
-    enterpriseApiKey: json["enterpriseApiKey"],
-    enterpriseApiSecret: json["enterpriseApiSecret"],
-    enterpriseBranchId: json["enterpriseBranchId"],
-    id: json["id"],
-    version: json["version"],
-    address: Address.fromJson(json["address"]),
-    rabbitMqUsername: json["rabbitMqUsername"],
-    rabbitMqpassword: json["rabbitMqpassword"],
-  );
+        name: json["name"],
+        enterpriseUrl: json["enterpriseURL"],
+        enterpriseApiKey: json["enterpriseApiKey"],
+        enterpriseApiSecret: json["enterpriseApiSecret"],
+        enterpriseBranchId: json["enterpriseBranchId"],
+        id: json["id"],
+        version: json["version"],
+        address: Address.fromJson(json["address"]),
+        rabbitMqUsername: json["rabbitMqUsername"],
+        rabbitMqpassword: json["rabbitMqpassword"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "name": name,
-    "enterpriseURL": enterpriseUrl,
-    "enterpriseApiKey": enterpriseApiKey,
-    "enterpriseApiSecret": enterpriseApiSecret,
-    "enterpriseBranchId": enterpriseBranchId,
-    "id": id,
-    "version": version,
-    "address": address.toJson(),
-    "rabbitMqUsername": rabbitMqUsername,
-    "rabbitMqpassword": rabbitMqpassword,
-  };
+        "name": name,
+        "enterpriseURL": enterpriseUrl,
+        "enterpriseApiKey": enterpriseApiKey,
+        "enterpriseApiSecret": enterpriseApiSecret,
+        "enterpriseBranchId": enterpriseBranchId,
+        "id": id,
+        "version": version,
+        "address": address.toJson(),
+        "rabbitMqUsername": rabbitMqUsername,
+        "rabbitMqpassword": rabbitMqpassword,
+      };
 }
 
 class Address {
@@ -204,32 +212,32 @@ class Address {
   String country;
 
   factory Address.fromJson(Map<String, dynamic> json) => Address(
-    id: json["id"],
-    created: DateTime.parse(json["created"]),
-    createdBy: json["createdBy"],
-    modified: DateTime.parse(json["modified"]),
-    lastModifiedBy: json["lastModifiedBy"],
-    building: json["building"],
-    street: json["street"],
-    area: json["area"],
-    city: json["city"],
-    zip: json["zip"],
-    country: json["country"],
-  );
+        id: json["id"],
+        created: DateTime.parse(json["created"]),
+        createdBy: json["createdBy"],
+        modified: DateTime.parse(json["modified"]),
+        lastModifiedBy: json["lastModifiedBy"],
+        building: json["building"],
+        street: json["street"],
+        area: json["area"],
+        city: json["city"],
+        zip: json["zip"],
+        country: json["country"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "created": created.toIso8601String(),
-    "createdBy": createdBy,
-    "modified": modified.toIso8601String(),
-    "lastModifiedBy": lastModifiedBy,
-    "building": building,
-    "street": street,
-    "area": area,
-    "city": city,
-    "zip": zip,
-    "country": country,
-  };
+        "id": id,
+        "created": created.toIso8601String(),
+        "createdBy": createdBy,
+        "modified": modified.toIso8601String(),
+        "lastModifiedBy": lastModifiedBy,
+        "building": building,
+        "street": street,
+        "area": area,
+        "city": city,
+        "zip": zip,
+        "country": country,
+      };
 }
 
 class Queue {
@@ -244,16 +252,16 @@ class Queue {
   int slaServe;
 
   factory Queue.fromJson(Map<String, dynamic> json) => Queue(
-    strategy: json["strategy"],
-    slaWait: json["slaWait"],
-    slaServe: json["slaServe"],
-  );
+        strategy: json["strategy"],
+        slaWait: json["slaWait"],
+        slaServe: json["slaServe"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "strategy": strategy,
-    "slaWait": slaWait,
-    "slaServe": slaServe,
-  };
+        "strategy": strategy,
+        "slaWait": slaWait,
+        "slaServe": slaServe,
+      };
 }
 
 class Sms {
@@ -272,20 +280,20 @@ class Sms {
   bool chooseMedium;
 
   factory Sms.fromJson(Map<String, dynamic> json) => Sms(
-    id: json["id"],
-    version: json["version"],
-    enabled: json["enabled"],
-    updates: json["updates"],
-    chooseMedium: json["chooseMedium"],
-  );
+        id: json["id"],
+        version: json["version"],
+        enabled: json["enabled"],
+        updates: json["updates"],
+        chooseMedium: json["chooseMedium"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "version": version,
-    "enabled": enabled,
-    "updates": updates,
-    "chooseMedium": chooseMedium,
-  };
+        "id": id,
+        "version": version,
+        "enabled": enabled,
+        "updates": updates,
+        "chooseMedium": chooseMedium,
+      };
 }
 
 class SurveyConf {
@@ -306,22 +314,23 @@ class SurveyConf {
   String trigger;
 
   factory SurveyConf.fromJson(Map<String, dynamic> json) => SurveyConf(
-    id: json["id"],
-    version: json["version"],
-    enabled: json["enabled"],
-    timeout: json["timeout"],
-    message: json["message"],
-    trigger: json["trigger"],
-  );
+        id: (json["id"] != null) ? json["id"] : "",
+        version: (json["version"] != null) ? json["version"] : 12345,
+        enabled: (json["enabled"] != null) ? json["enabled"] : false,
+        timeout: (json["timeout"] != null) ? json["timeout"] : 30,
+        message:
+            (json["message"] != null) ? json["message"] : "Waiting for Survey",
+        trigger: (json["trigger"] != null) ? json["trigger"] : "",
+      );
 
   Map<String, dynamic> toJson() => {
-    "id": id,
-    "version": version,
-    "enabled": enabled,
-    "timeout": timeout,
-    "message": message,
-    "trigger": trigger,
-  };
+        "id": id,
+        "version": version,
+        "enabled": enabled,
+        "timeout": timeout,
+        "message": message,
+        "trigger": trigger,
+      };
 }
 
 class Theme {
@@ -338,18 +347,18 @@ class Theme {
   bool showWaitingTime;
 
   factory Theme.fromJson(Map<String, dynamic> json) => Theme(
-    showTime: json["showTime"],
-    showArabic: json["showArabic"],
-    showWaitingCustomers: json["showWaitingCustomers"],
-    showWaitingTime: json["showWaitingTime"],
-  );
+        showTime: json["showTime"],
+        showArabic: json["showArabic"],
+        showWaitingCustomers: json["showWaitingCustomers"],
+        showWaitingTime: json["showWaitingTime"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "showTime": showTime,
-    "showArabic": showArabic,
-    "showWaitingCustomers": showWaitingCustomers,
-    "showWaitingTime": showWaitingTime,
-  };
+        "showTime": showTime,
+        "showArabic": showArabic,
+        "showWaitingCustomers": showWaitingCustomers,
+        "showWaitingTime": showWaitingTime,
+      };
 }
 
 class Token {
@@ -360,10 +369,10 @@ class Token {
   int tokenValidity;
 
   factory Token.fromJson(Map<String, dynamic> json) => Token(
-    tokenValidity: json["tokenValidity"],
-  );
+        tokenValidity: json["tokenValidity"],
+      );
 
   Map<String, dynamic> toJson() => {
-    "tokenValidity": tokenValidity,
-  };
+        "tokenValidity": tokenValidity,
+      };
 }

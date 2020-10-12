@@ -32,9 +32,13 @@ class _HomeWidgetState extends State<HomeWidget> {
   var registerFlag = false;
   var baseUrl;
 
+  HttpClient client = new HttpClient();
+
   @override
   initState() {
     super.initState();
+    client.badCertificateCallback =
+        ((X509Certificate cert, String host, int port) => true);
     registerStatus = CONSTANTS.dev_reg_init;
     pairStatus = CONSTANTS.dev_pair_init;
     pairFlag = false;
@@ -131,7 +135,7 @@ class _HomeWidgetState extends State<HomeWidget> {
       };
 
       register(api, payLoad, requestHeaders).then(
-          (value) => {
+          (HttpClientResponse value) => {
                 if ((value.statusCode == 200 || value.statusCode == 201) &&
                     mounted)
                   {
@@ -184,18 +188,19 @@ class _HomeWidgetState extends State<HomeWidget> {
         }
       }
 
-      checkPair(api, headers).then(
-          (value) => {
+      checkPair(api, headers, deviceId.toString()).then(
+          (HttpClientResponse value) => {
                 if ((value.statusCode == 200 || value.statusCode == 201) &&
                     !this.pairFlag)
                   {
                     this.pairFlag = true,
                     this.pairStatus = CONSTANTS.dev_paired,
                     timer.cancel(),
-                    if (this._timer != null && this._timer.isActive) {this._timer.cancel()},
+                    if (this._timer != null && this._timer.isActive)
+                      {this._timer.cancel()},
 
                     /// call reject api to reject other devices
-                    callReject(api, headers)
+                    callReject(api, headers, deviceId)
                   }
                 else if (value.statusCode != 200 && value.statusCode != 201)
                   {
@@ -215,11 +220,19 @@ class _HomeWidgetState extends State<HomeWidget> {
     });
   }
 
-  void callReject(String api, headers) {
+  void callReject(String api, headers, deviceId) {
     api = api + "/reject";
-    reject(api, headers).then(
-        (value) => {
-              print("Other devices rejected"),
+    reject(api, headers, deviceId).then(
+        (HttpClientResponse value) => {
+              if (value.statusCode == 200 || value.statusCode == 201)
+                {
+                  print("Other devices rejected"),
+                }
+              else
+                {
+                  print("Device rejection failed"),
+                  // todo
+                },
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
                       builder: (context) => SurveyViewWidget(
@@ -229,17 +242,30 @@ class _HomeWidgetState extends State<HomeWidget> {
         onError: (error) => {print(error)});
   }
 
-  Future<http.Response> register(
-      String api, payLoad, Map<String, String> requestHeaders) {
-    return http.post(api, body: jsonEncode(payLoad), headers: requestHeaders);
+  Future<HttpClientResponse> register(
+      String api, payLoad, Map<String, String> requestHeaders) async {
+    HttpClientRequest request = await client.postUrl(Uri.parse(api));
+    request.headers.set('content-type', 'application/json');
+    request.add(utf8.encode(json.encode(payLoad)));
+    HttpClientResponse response = await request.close();
+    return response;
   }
 
-  Future<http.Response> checkPair(
-      String api, Map<String, String> requestHeaders) {
-    return http.get(api, headers: requestHeaders);
+  Future<HttpClientResponse> checkPair(
+      String api, Map<String, String> requestHeaders, String deviceId) async {
+    HttpClientRequest request = await client.getUrl(Uri.parse(api));
+    request.headers.set('device-id', deviceId);
+    HttpClientResponse response = await request.close();
+
+    return response;
   }
 
-  Future<http.Response> reject(String api, Map<String, String> requestHeaders) {
-    return http.put(api, headers: requestHeaders);
+  Future<HttpClientResponse> reject(
+      String api, Map<String, String> requestHeaders, String deviceId) async {
+    HttpClientRequest request = await client.putUrl(Uri.parse(api));
+    request.headers.set('device-id', deviceId);
+    HttpClientResponse response = await request.close();
+    return response;
+    //return http.put(api, headers: requestHeaders);
   }
 }
