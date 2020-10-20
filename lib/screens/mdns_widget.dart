@@ -38,11 +38,13 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   List<ServiceInfo> _discoveredServices = <ServiceInfo>[];
   Timer _timer;
   bool _ipError = false;
+  bool _isBaseUrl = false;
   TextEditingController _popUpCtrl;
 
   @override
   initState() {
     super.initState();
+
     _popUpCtrl = new TextEditingController();
     discoveryCallbacks = new DiscoveryCallbacks(
       onDiscovered: (ServiceInfo info) {
@@ -79,8 +81,27 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         }
       },
     );
+
+    if (this.serverUrl == null) {
+      getBaseURlFromSharedPref().then(
+              (storedBaseUrl) => {
+          if (storedBaseUrl == null) {
+          setState(() {
+          serverUrl = storedBaseUrl;
+          }),
+
+          } else {
+          _initPackageInfo()
+          .then((value) => {startMdnsDiscovery(CONSTANTS.discovery_service)});
+    }
+  },
+    onError: (err) {
     _initPackageInfo()
         .then((value) => {startMdnsDiscovery(CONSTANTS.discovery_service)});
+    });
+  }
+
+
   }
 
   Future configureDeviceId(String url) async {
@@ -123,13 +144,13 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         appBar: AppBar(
           title: Container(
               child: Column(
-            children: [
-              Text(CONSTANTS.app_tittle),
-              if (this._packageInfo.version != null)
-                Text("V " + this._packageInfo.version,
-                    style: TextStyle(fontSize: 13, color: Colors.white70)),
-            ],
-          )),
+                children: [
+                  Text(CONSTANTS.app_tittle),
+                  if (this._packageInfo.version != null)
+                    Text("V " + this._packageInfo.version,
+                        style: TextStyle(fontSize: 13, color: Colors.white70)),
+                ],
+              )),
           actions: [
             Container(
               padding: EdgeInsets.all(5),
@@ -152,7 +173,10 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                 title: Text("Enter the Server details"),
                                 content: Container(
                                   width:
-                                      MediaQuery.of(context).size.width * 0.7,
+                                  MediaQuery
+                                      .of(context)
+                                      .size
+                                      .width * 0.7,
                                   child: Form(
                                     child: Column(
                                       mainAxisSize: MainAxisSize.min,
@@ -164,9 +188,9 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                             decoration: InputDecoration(
                                               border: new OutlineInputBorder(
                                                   borderSide: new BorderSide(
-                                                color: Color.fromRGBO(
-                                                    45, 51, 62, 1),
-                                              )),
+                                                    color: Color.fromRGBO(
+                                                        45, 51, 62, 1),
+                                                  )),
                                               labelText: "Server URL",
                                             ),
                                           ),
@@ -175,7 +199,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                           Padding(
                                             padding: EdgeInsets.all(5.0),
                                             child:
-                                                Text("Please enter valid url"),
+                                            Text("Please enter valid url"),
                                           ),
                                       ],
                                     ),
@@ -184,17 +208,22 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                                 actions: [
                                   RaisedButton(
                                     child: Text("Save"),
-                                    onPressed: () {
-                                      if ((this._popUpCtrl.text == null || this._popUpCtrl.text == "" ) ||
-                                          !validator.url(this._popUpCtrl.text)) {
+                                    onPressed: () async {
+                                      SharedPreferences prefs = await SharedPreferences.getInstance();
+
+                                      if ((this._popUpCtrl.text == null ||
+                                          this._popUpCtrl.text == "") ||
+                                          !validator
+                                              .url(this._popUpCtrl.text)) {
                                         setState(() {
                                           this._ipError = true;
                                         });
                                       } else {
-
+                                        prefs.setString("storedBaseUrl", this._popUpCtrl.text);
                                         setState(() {
                                           this._ipError = false;
                                         });
+
                                         configureDeviceId(this._popUpCtrl.text);
                                         this._popUpCtrl.clear();
                                         Navigator.of(context).pop();
@@ -284,7 +313,8 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   Widget loadBody() {
     /// load HOME if resolved and deviceId generated
     if (this.discoveryFlag == CONSTANTS.mdns_resolved &&
-        this.deviceId != null && !(this.serverUrl == null || this.serverUrl == "")) {
+        this.deviceId != null &&
+        !(this.serverUrl == null || this.serverUrl == "")) {
       return HomeWidget(
           key: UniqueKey(), deviceId: this.deviceId, serverUrl: this.serverUrl);
     } else {
@@ -300,5 +330,14 @@ class _MDNSWidgetState extends State<MDNSWidget> {
     setState(() {
       _packageInfo = info;
     });
+  }
+
+  Future<String> getBaseURlFromSharedPref() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (prefs.getString("storedBaseUrl") != null) {
+      return prefs.getString("storedBaseUrl");
+    } else {
+      return null;
+    }
   }
 }

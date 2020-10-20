@@ -283,6 +283,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         print(error),
       },
       onStompError: (dynamic error) => {
+
         print(error),
       },
       onDisconnect: (dynamic error) => {
@@ -298,7 +299,6 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         print(error),
       },
       onWebSocketDone: () => {
-
         print("STOMP Done"),
         this.stompClient.deactivate()
 
