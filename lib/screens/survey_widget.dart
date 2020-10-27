@@ -272,8 +272,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
     var uri = Uri.parse(this.baseUrl);
-
-    var socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
+    var socketUrl = "wss://" + uri.host + ":" + uri.port.toString() + "/push";
 
     this.stompClient = new StompClient(
         config: StompConfig(

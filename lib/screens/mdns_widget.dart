@@ -85,14 +85,15 @@ class _MDNSWidgetState extends State<MDNSWidget> {
     if (this.serverUrl == null) {
       getBaseURlFromSharedPref().then(
               (storedBaseUrl) => {
-          if (storedBaseUrl == null) {
+          if (storedBaseUrl != null) {
+            this.configureDeviceId(storedBaseUrl),
           setState(() {
           serverUrl = storedBaseUrl;
           }),
 
           } else {
           _initPackageInfo()
-          .then((value) => {startMdnsDiscovery(CONSTANTS.discovery_service)});
+          .then((value) => {startMdnsDiscovery(CONSTANTS.discovery_service)})
     }
   },
     onError: (err) {
