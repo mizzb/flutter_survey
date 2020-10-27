@@ -8,6 +8,7 @@ import 'package:flutter/painting.dart';
 
 import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:package_info/package_info.dart';
+import 'package:queberry_feedback/globals.dart';
 import 'package:queberry_feedback/model/Config.dart';
 import 'package:queberry_feedback/model/Survey.dart';
 import 'package:stomp_dart_client/stomp.dart';
@@ -36,6 +37,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Device Survey
   var assignedSurveyId;
   var surveyUrl;
+  var surveyApiError = null;
 
   var deviceSurvey = false; // flag to check survey assigned or not
   var surveyEnabled = false; // flag to check if survey enabled or not
@@ -255,6 +257,12 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       ));
     }
 
+    if(this.surveyApiError != null){
+      childrens.add(Container(
+        child: getSurveyMessage(this.surveyApiError),
+      ));
+    }
+
     return childrens;
   }
 
@@ -272,55 +280,71 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
     var uri = Uri.parse(this.baseUrl);
+    var socketUrl = "wss://" + uri.host + ":" + uri.port.toString() + "/push";
+    if(uri.scheme == 'http'){
+       socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
+    }
 
-    var socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
-
+    if (this.deviceConfigStatus != "Connecting to STOMP Server") {
+      setState(() {
+        this.deviceConfigStatus = "Connecting to STOMP Server";
+      });
+    }
     this.stompClient = new StompClient(
         config: StompConfig(
       url: socketUrl,
       onConnect: onConnect,
       onWebSocketError: (dynamic error) => {
-        print(error),
+        print(error.toString()),
+        ToastHelper.toast("Web Socket Error"),
       },
-      onStompError: (dynamic error) => {
+      onStompError: (StompFrame error) => {
+        print(error),
+        ToastHelper.toast("STOMP Error"),
+      },
+      onDisconnect: (StompFrame error) => {
+        print(error),
+      ToastHelper.toast("STOMP Disconnected"),
+      },
+      onUnhandledFrame: (StompFrame error) => {
+        print(error),
+        ToastHelper.toast("Unhandled frame"),
+      },
+      onUnhandledMessage: (StompFrame error) => {
+        print(error),
+        ToastHelper.toast("Unhandled Message"),
+      },
+      onUnhandledReceipt: (StompFrame error) => {
+        print(error),
+        ToastHelper.toast("Unhandled Reciept"),
+      },
+      onWebSocketDone: () => {this.stompClient.deactivate()},
+      onDebugMessage: (String error) => {
+        print(error),
 
-        print(error),
-      },
-      onDisconnect: (dynamic error) => {
-        print(error),
-      },
-      onUnhandledFrame: (dynamic error) => {
-        print(error),
-      },
-      onUnhandledMessage: (dynamic error) => {
-        print(error),
-      },
-      onUnhandledReceipt: (dynamic error) => {
-        print(error),
-      },
-      onWebSocketDone: () => {
-        print("STOMP Done"),
-        this.stompClient.deactivate()
-
-      },
-      onDebugMessage: (dynamic error) => {
-        print(error),
       },
     ));
 
     stompClient.activate();
-
   }
-
-
 
   /// On STOMP Connect
   onConnect(StompClient client, StompFrame frame) {
-    if (!this.STOMPInit) {
+    print("Connected to STOMP Server");
+    if (this.deviceConfigStatus != "Connected to STOMP")
+    {
       setState(() {
-        this.STOMPInit = true;
+        this.deviceConfigStatus = "Connected to STOMP";
       });
     }
+
+    if (!this.STOMPInit) {
+      Timer(
+          Duration(seconds: 3), () => setState(() {
+        this.STOMPInit = true;
+      }));
+    }
+
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
       callback: (dynamic frame) {
@@ -486,13 +510,16 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                     this.surveyUrl = CONSTANTS.api_take_survey + value.id;
                     print("Survey URL: " + this.surveyUrl);
                     this.deviceSurvey = true;
+                    surveyApiError = null;
                   })
                 }
               else
                 {
+                  ToastHelper.toast("Survey response error"),
                   setState(() {
                     this.assignedSurveyId = null;
                     this.deviceSurvey = false;
+                    surveyApiError = null;
                   })
                 }
             },
@@ -500,6 +527,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
               setState(() {
                 this.assignedSurveyId = null;
                 this.deviceSurvey = false;
+                surveyApiError = error.toString();
               })
             });
   }
@@ -545,7 +573,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         return null;
       }
     } catch (e) {
-      return null;
+      return e;
     }
   }
 

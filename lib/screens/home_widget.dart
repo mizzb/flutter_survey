@@ -87,16 +87,24 @@ class _HomeWidgetState extends State<HomeWidget> {
                       color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
               ),
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.02,
-              ),
               Container(
                 padding: EdgeInsets.all(5),
                 child: Text(
                   this.registerStatus,
                   style: TextStyle(
-                      fontSize: 18, color: Color.fromRGBO(45, 51, 62, 1)),
+                      fontSize: 16, color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
+
+              ),
+
+              Container(
+                padding: EdgeInsets.all(5),
+                child: Text(
+                  "Server url: " + this.baseUrl,
+                  style: TextStyle(
+                      fontSize: 12, color: Color.fromRGBO(45, 51, 62, 1)),
+                ),
+
               ),
 
               /// If device registered, show device paring status
@@ -231,7 +239,7 @@ class _HomeWidgetState extends State<HomeWidget> {
               else
                 {
                   print("Device rejection failed"),
-                  // todo
+
                 },
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
