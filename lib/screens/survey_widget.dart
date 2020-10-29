@@ -59,6 +59,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   Timer _deviceStatusTime;
   Timer _surveyTimer;
+  Timer _stompTimer;
 
   Config config;
   HttpClient client = new HttpClient();
@@ -68,6 +69,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   @override
   void dispose() {
     this._deviceStatusTime.cancel();
+    this._stompTimer.cancel();
     super.dispose();
   }
 
@@ -158,7 +160,9 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(child: LottieWidget(lottieType: "config_app")),
+            Container(
+
+                child: LottieWidget(lottieType: "config_app")),
             Container(
               child: Text(
                 this.deviceConfigStatus,
@@ -257,7 +261,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       ));
     }
 
-    if(this.surveyApiError != null){
+    if (this.surveyApiError != null) {
       childrens.add(Container(
         child: getSurveyMessage(this.surveyApiError),
       ));
@@ -279,60 +283,74 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
+
     var uri = Uri.parse(this.baseUrl);
     var socketUrl = "wss://" + uri.host + ":" + uri.port.toString() + "/push";
-    if(uri.scheme == 'http'){
-       socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
+    if (uri.scheme == 'http') {
+      socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
     }
 
+    print(" - Setting up STOMP: "+ socketUrl );
     if (this.deviceConfigStatus != "Connecting to STOMP Server") {
       setState(() {
         this.deviceConfigStatus = "Connecting to STOMP Server";
       });
     }
-    this.stompClient = new StompClient(
-        config: StompConfig(
-      url: socketUrl,
-      onConnect: onConnect,
-      onWebSocketError: (dynamic error) => {
-        print(error.toString()),
-        ToastHelper.toast("Web Socket Error"),
-      },
-      onStompError: (StompFrame error) => {
-        print(error),
-        ToastHelper.toast("STOMP Error"),
-      },
-      onDisconnect: (StompFrame error) => {
-        print(error),
-      ToastHelper.toast("STOMP Disconnected"),
-      },
-      onUnhandledFrame: (StompFrame error) => {
-        print(error),
-        ToastHelper.toast("Unhandled frame"),
-      },
-      onUnhandledMessage: (StompFrame error) => {
-        print(error),
-        ToastHelper.toast("Unhandled Message"),
-      },
-      onUnhandledReceipt: (StompFrame error) => {
-        print(error),
-        ToastHelper.toast("Unhandled Reciept"),
-      },
-      onWebSocketDone: () => {this.stompClient.deactivate()},
-      onDebugMessage: (String error) => {
-        print(error),
 
-      },
-    ));
+    if(this.stompClient != null){
+      this.stompClient.deactivate();
+      Timer(
+          Duration(seconds: 2),
+              () => setState(() {
+            this.stompClient.activate();
+          }));
+    }else {
+      this.stompClient = new StompClient(
+          config: StompConfig(
+            url: socketUrl,
+            onConnect: onConnect,
+            onWebSocketError: (dynamic error) => {
+              //print("WS Error " + error.toString()),
+              ToastHelper.toast("Web Socket Error"),
+            },
+            onStompError: (StompFrame error) => {
+              //print("STOMP Error " + error.toString()),
+              ToastHelper.toast("STOMP Error"),
+            },
+            onDisconnect: (StompFrame error) => {
+              //print("Disconnect " + error.toString()),
+              ToastHelper.toast("STOMP Disconnected"),
+            },
+            onUnhandledFrame: (StompFrame error) => {
+              //print("Unhandled F"  + error.toString()),
+              ToastHelper.toast("Unhandled frame"),
+            },
+            onUnhandledMessage: (StompFrame error) => {
+              //print("Unhandled M"  + error.toString()),
+              ToastHelper.toast("Unhandled Message"),
+            },
+            onUnhandledReceipt: (StompFrame error) => {
+              //print("Unhandled R:" + error.toString()),
+              ToastHelper.toast("Unhandled Receipt"),
+            },
+            onWebSocketDone: () => {
+              ToastHelper.toast("WebSocket done: Deactivating STOMP"),
+              this.stompClient.deactivate()
+            },
+            onDebugMessage: (String message) => {
+              print("Debug:" + message),
+            },
+          ));
 
-    stompClient.activate();
+      stompClient.activate();
+      print("STOMP Activated: " + stompClient.connected.toString());
+    }
   }
 
   /// On STOMP Connect
   onConnect(StompClient client, StompFrame frame) {
     print("Connected to STOMP Server");
-    if (this.deviceConfigStatus != "Connected to STOMP")
-    {
+    if (this.deviceConfigStatus != "Connected to STOMP") {
       setState(() {
         this.deviceConfigStatus = "Connected to STOMP";
       });
@@ -340,10 +358,13 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
     if (!this.STOMPInit) {
       Timer(
-          Duration(seconds: 3), () => setState(() {
-        this.STOMPInit = true;
-      }));
+          Duration(seconds: 3),
+          () => setState(() {
+                this.STOMPInit = true;
+              }));
     }
+
+    //refreshStomp();
 
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
@@ -358,7 +379,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     client.subscribe(
       destination: CONSTANTS.api_STOMP_device,
       callback: (dynamic frame) {
-        print(CONSTANTS.api_STOMP_device + " Survey changes invoked");
+        print(CONSTANTS.api_STOMP_device + " Survey Assigned/Unassigned");
         if (frame != null) {
           getSurvey(widget.deviceId);
         }
@@ -456,14 +477,14 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
                     this.surveyEnabled = value.survey.enabled;
                   }),
 
-                  if (value.survey.enabled)
-                    {
-                      print("---> Survey Enabled for " +
-                          value.survey.timeout.toString() +
-                          "Secs")
-                    }
-                  else
-                    {print("--> survey disabled")},
+//                  if (value.survey.enabled)
+//                    {
+//                      print("---> Survey Enabled for " +
+//                          value.survey.timeout.toString() +
+//                          "Secs")
+//                    }
+//                  else
+//                    {print("--> survey disabled")},
 
                   /// load survey if survey not available
                   if (!this.deviceSurvey && this.config.survey.enabled)
@@ -540,6 +561,26 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       });
       this._surveyTimer.cancel();
     });
+  }
+
+  void refreshStomp() {
+    if (this._stompTimer.isActive) {
+      this._stompTimer.cancel();
+    }
+
+    this._stompTimer = Timer.periodic(
+        Duration(seconds: 30),
+        (Timer t) => {
+              if (this.deviceConnection)
+                {
+                  this.stompClient.deactivate(),
+                  Timer(
+                      Duration(seconds: 2),
+                      () => setState(() {
+                            this.stompClient.activate();
+                          }))
+                }
+            });
   }
 
   Future<dynamic> getDeviceStatus(
