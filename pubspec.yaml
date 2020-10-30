@@ -28,6 +28,7 @@ dependencies:
   package_info: ^0.4.3
   flutter_native_splash: ^0.1.9
   regexed_validator: ^1.0.4
+  fluttertoast: ^7.1.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
