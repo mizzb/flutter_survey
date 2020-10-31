@@ -29,7 +29,7 @@ dependencies:
   flutter_native_splash: ^0.1.9
   regexed_validator: ^1.0.4
   fluttertoast: ^7.1.1
-  webview_flutter:
+  webview_flutter: 1.0.5
 
 dev_dependencies:
   flutter_test:
