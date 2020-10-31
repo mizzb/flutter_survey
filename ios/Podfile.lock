@@ -14,6 +14,8 @@ PODS:
   - shared_preferences (0.0.1):
     - Flutter
   - Toast (4.0.0)
+  - webview_flutter (0.0.1):
+    - Flutter
 
 DEPENDENCIES:
   - Flutter (from `Flutter`)
@@ -23,6 +25,7 @@ DEPENDENCIES:
   - fluttertoast (from `.symlinks/plugins/fluttertoast/ios`)
   - package_info (from `.symlinks/plugins/package_info/ios`)
   - shared_preferences (from `.symlinks/plugins/shared_preferences/ios`)
+  - webview_flutter (from `.symlinks/plugins/webview_flutter/ios`)
 
 SPEC REPOS:
   trunk:
@@ -43,6 +46,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/package_info/ios"
   shared_preferences:
     :path: ".symlinks/plugins/shared_preferences/ios"
+  webview_flutter:
+    :path: ".symlinks/plugins/webview_flutter/ios"
 
 SPEC CHECKSUMS:
   Flutter: 0e3d915762c693b495b44d77113d4970485de6ec
@@ -53,6 +58,7 @@ SPEC CHECKSUMS:
   package_info: 873975fc26034f0b863a300ad47e7f1ac6c7ec62
   shared_preferences: af6bfa751691cdc24be3045c43ec037377ada40d
   Toast: 91b396c56ee72a5790816f40d3a94dd357abc196
+  webview_flutter: d2b4d6c66968ad042ad94cbb791f5b72b4678a96
 
 PODFILE CHECKSUM: df4f92a45e45058a60140bf1ca15e990705a721a
 

@@ -224,7 +224,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
           navigationDelegate: (NavigationRequest request) {
             /// todo add Url here
             if (request.url.startsWith(
-                "https://web-dev.cinematic.unitedcinemas.com.au/auth#access_token")) {
+                this.baseUrl + "/survey/thankYou")) {
               setState(() {
                 this.surveyFlag = false;
               });
