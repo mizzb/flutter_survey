@@ -6,7 +6,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
 
-import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 import 'package:package_info/package_info.dart';
 import 'package:queberry_feedback/globals.dart';
 import 'package:queberry_feedback/model/Config.dart';
@@ -14,7 +13,8 @@ import 'package:queberry_feedback/model/Survey.dart';
 import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
-import 'package:http/http.dart' as http;
+import 'package:webview_flutter/webview_flutter.dart';
+
 
 import '../constants/constants.dart' as CONSTANTS;
 import '../lottie_widget.dart';
@@ -92,13 +92,15 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final Completer<WebViewController> _webViewController =
+    Completer<WebViewController>();
     if (this.deviceSurvey &&
         this.assignedSurveyId != null &&
         this.deviceConnection &&
         this.deviceConfig) {
       return Scaffold(
         body: Container(
-            width: MediaQuery.of(context).size.width, child: loadSurveyBody()),
+            width: MediaQuery.of(context).size.width, child: loadSurveyBody(_webViewController)),
       );
     } else {
       return Scaffold(
@@ -148,12 +150,12 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
             child: Container(
                 height: MediaQuery.of(context).size.height * 0.9,
                 width: MediaQuery.of(context).size.width,
-                child: loadSurveyBody())),
+                child: loadSurveyBody(_webViewController))),
       );
     }
   }
 
-  Widget loadSurveyBody() {
+  Widget loadSurveyBody(_webViewController) {
     /// Show config status if config not loaded
     if (!this.deviceConfig || !this.STOMPInit) {
       return Center(
@@ -178,7 +180,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
       );
     } else if (this.deviceConnection) {
       /// Show Survey if assigned else show error
-      return buildSurveyView();
+      return buildSurveyView(_webViewController);
     } else {
       /// Show connection error
       return Center(
@@ -202,35 +204,40 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     }
   }
 
-  Widget buildSurveyView() {
+  Widget buildSurveyView(_webViewController) {
     if (this.deviceSurvey &&
         assignedSurveyId != null &&
         this.surveyEnabled &&
         this.surveyFlag) {
       startSurveyTimer(); // start timer
-      return new WebviewScaffold(
-          url: this.baseUrl + this.surveyUrl,
-          withZoom: true,
-          withLocalStorage: true,
-          hidden: true,
-          initialChild: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(child: LottieWidget(lottieType: "loading")),
-                Container(
-                  child: Text(
-                    CONSTANTS.loading_survey,
-                    style: TextStyle(
-                        fontWeight: FontWeight.normal,
-                        fontSize: 25,
-                        color: Colors.blueGrey,
-                        decoration: TextDecoration.none),
-                  ),
-                )
-              ],
-            ),
-          ));
+      return Container(
+        width: MediaQuery.of(context).size.width,
+        height: MediaQuery.of(context).size.height,
+        child: WebView(
+          initialUrl: this.baseUrl + this.surveyUrl,
+          userAgent: 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) ' +
+              'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Mobile Safari/537.36',
+          javascriptMode: JavascriptMode.unrestricted,
+          onWebViewCreated: (WebViewController webViewController) {
+            _webViewController.complete(webViewController);
+          },
+          navigationDelegate: (NavigationRequest request) {
+            /// todo add Url here
+            if (request.url.startsWith(
+                "https://web-dev.cinematic.unitedcinemas.com.au/auth#access_token")) {
+              setState(() {
+                this.surveyFlag = false;
+              });
+              return NavigationDecision.prevent;
+            }
+
+            return NavigationDecision.navigate;
+          },
+          gestureNavigationEnabled: true,
+        )
+      );
+
+
     } else {
       return Container(
         width: MediaQuery.of(context).size.width,
