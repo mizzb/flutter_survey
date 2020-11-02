@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/painting.dart';
+import 'package:flutter_webview_plugin/flutter_webview_plugin.dart';
 
 import 'package:package_info/package_info.dart';
 import 'package:queberry_feedback/globals.dart';
@@ -14,7 +15,6 @@ import 'package:stomp_dart_client/stomp.dart';
 import 'package:stomp_dart_client/stomp_config.dart';
 import 'package:stomp_dart_client/stomp_frame.dart';
 import 'package:webview_flutter/webview_flutter.dart';
-
 
 import '../constants/constants.dart' as CONSTANTS;
 import '../lottie_widget.dart';
@@ -93,14 +93,15 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   @override
   Widget build(BuildContext context) {
     final Completer<WebViewController> _webViewController =
-    Completer<WebViewController>();
+        Completer<WebViewController>();
     if (this.deviceSurvey &&
         this.assignedSurveyId != null &&
         this.deviceConnection &&
         this.deviceConfig) {
       return Scaffold(
         body: Container(
-            width: MediaQuery.of(context).size.width, child: loadSurveyBody(_webViewController)),
+            width: MediaQuery.of(context).size.width,
+            child: loadSurveyBody(_webViewController)),
       );
     } else {
       return Scaffold(
@@ -162,9 +163,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-
-                child: LottieWidget(lottieType: "config_app")),
+            Container(child: LottieWidget(lottieType: "config_app")),
             Container(
               child: Text(
                 this.deviceConfigStatus,
@@ -210,34 +209,29 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         this.surveyEnabled &&
         this.surveyFlag) {
       startSurveyTimer(); // start timer
-      return Container(
-        width: MediaQuery.of(context).size.width,
-        height: MediaQuery.of(context).size.height,
-        child: WebView(
-          initialUrl: this.baseUrl + this.surveyUrl,
-          userAgent: 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) ' +
-              'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.94 Mobile Safari/537.36',
-          javascriptMode: JavascriptMode.unrestricted,
-          onWebViewCreated: (WebViewController webViewController) {
-            _webViewController.complete(webViewController);
-          },
-          navigationDelegate: (NavigationRequest request) {
-            /// todo add Url here
-            if (request.url.startsWith(
-                this.baseUrl + "/survey/thankYou")) {
-              setState(() {
-                this.surveyFlag = false;
-              });
-              return NavigationDecision.prevent;
-            }
-
-            return NavigationDecision.navigate;
-          },
-          gestureNavigationEnabled: true,
-        )
-      );
-
-
+      return new WebviewScaffold(
+          url: this.baseUrl + this.surveyUrl,
+          withZoom: true,
+          withLocalStorage: true,
+          hidden: true,
+          initialChild: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(child: LottieWidget(lottieType: "loading")),
+                Container(
+                  child: Text(
+                    CONSTANTS.loading_survey,
+                    style: TextStyle(
+                        fontWeight: FontWeight.normal,
+                        fontSize: 25,
+                        color: Colors.blueGrey,
+                        decoration: TextDecoration.none),
+                  ),
+                )
+              ],
+            ),
+          ));
     } else {
       return Container(
         width: MediaQuery.of(context).size.width,
@@ -290,64 +284,63 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   /// Method for setting up STOMP
   void setUpConfigSocket(deviceId) {
-
     var uri = Uri.parse(this.baseUrl);
     var socketUrl = "wss://" + uri.host + ":" + uri.port.toString() + "/push";
     if (uri.scheme == 'http') {
       socketUrl = "ws://" + uri.host + ":" + uri.port.toString() + "/push";
     }
 
-    print(" - Setting up STOMP: "+ socketUrl );
+    print(" - Setting up STOMP: " + socketUrl);
     if (this.deviceConfigStatus != "Connecting to STOMP Server") {
       setState(() {
         this.deviceConfigStatus = "Connecting to STOMP Server";
       });
     }
 
-    if(this.stompClient != null){
+    if (this.stompClient != null) {
       this.stompClient.deactivate();
       Timer(
           Duration(seconds: 2),
-              () => setState(() {
-            this.stompClient.activate();
-          }));
-    }else {
+          () => setState(() {
+                this.stompClient.activate();
+              }));
+    } else {
       this.stompClient = new StompClient(
           config: StompConfig(
-            url: socketUrl,
-            onConnect: onConnect,
-            onWebSocketError: (dynamic error) => {
-              //print("WS Error " + error.toString()),
-              ToastHelper.toast("Web Socket Error"),
-            },
-            onStompError: (StompFrame error) => {
-              //print("STOMP Error " + error.toString()),
-              ToastHelper.toast("STOMP Error"),
-            },
-            onDisconnect: (StompFrame error) => {
-              //print("Disconnect " + error.toString()),
-              ToastHelper.toast("STOMP Disconnected"),
-            },
-            onUnhandledFrame: (StompFrame error) => {
-              //print("Unhandled F"  + error.toString()),
-              ToastHelper.toast("Unhandled frame"),
-            },
-            onUnhandledMessage: (StompFrame error) => {
-              //print("Unhandled M"  + error.toString()),
-              ToastHelper.toast("Unhandled Message"),
-            },
-            onUnhandledReceipt: (StompFrame error) => {
-              //print("Unhandled R:" + error.toString()),
-              ToastHelper.toast("Unhandled Receipt"),
-            },
-            onWebSocketDone: () => {
-              ToastHelper.toast("WebSocket done: Deactivating STOMP"),
-              this.stompClient.deactivate()
-            },
-            onDebugMessage: (String message) => {
-              print("Debug:" + message),
-            },
-          ));
+        url: socketUrl,
+        onConnect: onConnect,
+        onWebSocketError: (dynamic error) => {
+          //print("WS Error " + error.toString()),
+          ToastHelper.toast("Web Socket Error"),
+        },
+        onStompError: (StompFrame error) => {
+          //print("STOMP Error " + error.toString()),
+          ToastHelper.toast("STOMP Error"),
+        },
+        onDisconnect: (StompFrame error) => {
+          //print("Disconnect " + error.toString()),
+          ToastHelper.toast("STOMP Disconnected"),
+        },
+        onUnhandledFrame: (StompFrame error) => {
+          //print("Unhandled F"  + error.toString()),
+          ToastHelper.toast("Unhandled frame"),
+        },
+        onUnhandledMessage: (StompFrame error) => {
+          //print("Unhandled M"  + error.toString()),
+          ToastHelper.toast("Unhandled Message"),
+        },
+        onUnhandledReceipt: (StompFrame error) => {
+          //print("Unhandled R:" + error.toString()),
+          ToastHelper.toast("Unhandled Receipt"),
+        },
+        onWebSocketDone: () => {
+          ToastHelper.toast("WebSocket done: Deactivating STOMP"),
+          this.stompClient.deactivate()
+        },
+        onDebugMessage: (String message) => {
+          print("Debug:" + message),
+        },
+      ));
 
       stompClient.activate();
       print("STOMP Activated: " + stompClient.connected.toString());
@@ -362,7 +355,6 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         this.deviceConfigStatus = "Connected to STOMP";
       });
     }
-
     if (!this.STOMPInit) {
       Timer(
           Duration(seconds: 3),
@@ -371,7 +363,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
               }));
     }
 
-    //refreshStomp();
+    refreshStomp();
 
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
@@ -571,22 +563,13 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   void refreshStomp() {
-    if (this._stompTimer.isActive) {
-      this._stompTimer.cancel();
-    }
-
+    if (this._stompTimer.isActive) this._stompTimer.cancel();
     this._stompTimer = Timer.periodic(
-        Duration(seconds: 30),
+        Duration(seconds: 60),
         (Timer t) => {
-              if (this.deviceConnection)
-                {
-                  this.stompClient.deactivate(),
-                  Timer(
-                      Duration(seconds: 2),
-                      () => setState(() {
-                            this.stompClient.activate();
-                          }))
-                }
+              print("Restarting Stomp"),
+              this.stompClient.deactivate(),
+              Timer(Duration(seconds: 3), () => this.stompClient.activate())
             });
   }
 
