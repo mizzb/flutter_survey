@@ -363,8 +363,6 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
               }));
     }
 
-    refreshStomp();
-
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
       callback: (dynamic frame) {
@@ -402,6 +400,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         }
       },
     );
+
+    refreshStomp();
   }
 
   /// Check if device connected to server in every 10 seconds.
@@ -563,13 +563,13 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   void refreshStomp() {
-    if (this._stompTimer.isActive) this._stompTimer.cancel();
+    if (this._stompTimer != null && this._stompTimer.isActive) this._stompTimer.cancel();
     this._stompTimer = Timer.periodic(
-        Duration(seconds: 60),
+        Duration(seconds: 300),
         (Timer t) => {
               print("Restarting Stomp"),
               this.stompClient.deactivate(),
-              Timer(Duration(seconds: 3), () => this.stompClient.activate())
+              Timer(Duration(seconds: 5), () => this.stompClient.activate())
             });
   }
 
