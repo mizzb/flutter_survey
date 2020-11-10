@@ -363,7 +363,7 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
               }));
     }
 
-    refreshStomp();
+    refreshStomp(widget.deviceId);
 
     client.subscribe(
       destination: CONSTANTS.api_STOMP_config,
@@ -562,14 +562,20 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
     });
   }
 
-  void refreshStomp() {
-    if (this._stompTimer.isActive) this._stompTimer.cancel();
+  void refreshStomp(deviceId) {
+    if (this._stompTimer != null && this._stompTimer.isActive) this._stompTimer.cancel();
+    var body = {"\"device-id\"": "\"" +deviceId + "\""};
     this._stompTimer = Timer.periodic(
         Duration(seconds: 60),
         (Timer t) => {
-              print("Restarting Stomp"),
-              this.stompClient.deactivate(),
-              Timer(Duration(seconds: 3), () => this.stompClient.activate())
+              print("Checking stomp status"),
+
+              if (this.stompClient.connected)
+                {
+                  this
+                      .stompClient
+                      .send(destination: '/device/ping', body: body.toString(), headers: {})
+                }
             });
   }
 
