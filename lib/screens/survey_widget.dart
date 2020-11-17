@@ -552,9 +552,8 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   void refreshStomp(deviceId) {
-    if (this._stompTimer != null && this._stompTimer.isActive)
-      this._stompTimer.cancel();
-    var body = {"\"device-id\"": "\"" + deviceId + "\""};
+    if (this._stompTimer != null && this._stompTimer.isActive) this._stompTimer.cancel();
+    var body = {"\"deviceId\"": "\"" +deviceId + "\""};
     this._stompTimer = Timer.periodic(
         Duration(seconds: 60),
         (Timer t) => {
