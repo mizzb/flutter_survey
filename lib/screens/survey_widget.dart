@@ -310,32 +310,25 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
         url: socketUrl,
         onConnect: onConnect,
         onWebSocketError: (dynamic error) => {
-          //print("WS Error " + error.toString()),
           ToastHelper.toast("Web Socket Error"),
         },
         onStompError: (StompFrame error) => {
-          //print("STOMP Error " + error.toString()),
           ToastHelper.toast("STOMP Error"),
         },
         onDisconnect: (StompFrame error) => {
-          //print("Disconnect " + error.toString()),
           ToastHelper.toast("STOMP Disconnected"),
         },
         onUnhandledFrame: (StompFrame error) => {
-          //print("Unhandled F"  + error.toString()),
           ToastHelper.toast("Unhandled frame"),
         },
         onUnhandledMessage: (StompFrame error) => {
-          //print("Unhandled M"  + error.toString()),
           ToastHelper.toast("Unhandled Message"),
         },
         onUnhandledReceipt: (StompFrame error) => {
-          //print("Unhandled R:" + error.toString()),
           ToastHelper.toast("Unhandled Receipt"),
         },
         onWebSocketDone: () => {
           ToastHelper.toast("WebSocket done: Deactivating STOMP"),
-          this.stompClient.deactivate()
         },
         onDebugMessage: (String message) => {
           print("Debug:" + message),
@@ -395,9 +388,11 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
           print("Received Device Id:" + resp['deviceId']);
           print("System Device Id:" + widget.deviceId);
           if (resp['deviceId'] != null && resp['deviceId'] == widget.deviceId) {
-            setState(() {
-              this.surveyFlag = true;
-            });
+            if (this.surveyFlag == false) {
+              setState(() {
+                this.surveyFlag = true;
+              });
+            }
           }
         }
       },
@@ -470,20 +465,14 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
               if (value != null)
                 {
                   /// set config flag
-                  setState(() {
-                    this.config = value;
-                    this.deviceConfig = true;
-                    this.surveyEnabled = value.survey.enabled;
-                  }),
-
-//                  if (value.survey.enabled)
-//                    {
-//                      print("---> Survey Enabled for " +
-//                          value.survey.timeout.toString() +
-//                          "Secs")
-//                    }
-//                  else
-//                    {print("--> survey disabled")},
+                  if (this.config != value ||
+                      this.deviceConfig != true ||
+                      this.surveyEnabled != value.survey.enabled)
+                    setState(() {
+                      this.config = value;
+                      this.deviceConfig = true;
+                      this.surveyEnabled = value.survey.enabled;
+                    }),
 
                   /// load survey if survey not available
                   if (!this.deviceSurvey && this.config.survey.enabled)
@@ -563,18 +552,19 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
   }
 
   void refreshStomp(deviceId) {
-    if (this._stompTimer != null && this._stompTimer.isActive) this._stompTimer.cancel();
-    var body = {"\"device-id\"": "\"" +deviceId + "\""};
+    if (this._stompTimer != null && this._stompTimer.isActive)
+      this._stompTimer.cancel();
+    var body = {"\"device-id\"": "\"" + deviceId + "\""};
     this._stompTimer = Timer.periodic(
         Duration(seconds: 60),
         (Timer t) => {
               print("Checking stomp status"),
-
               if (this.stompClient.connected)
                 {
-                  this
-                      .stompClient
-                      .send(destination: '/device/ping', body: body.toString(), headers: {})
+                  this.stompClient.send(
+                      destination: '/device/ping',
+                      body: body.toString(),
+                      headers: {})
                 }
             });
   }
@@ -634,8 +624,10 @@ class _WebViewWidgetState extends State<SurveyViewWidget> {
 
   Future<void> _initPackageInfo() async {
     final PackageInfo info = await PackageInfo.fromPlatform();
-    setState(() {
-      _packageInfo = info;
-    });
+    if (this._packageInfo.version == 'Unknown') {
+      setState(() {
+        _packageInfo = info;
+      });
+    }
   }
 }

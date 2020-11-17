@@ -32,6 +32,7 @@ class _MDNSWidgetState extends State<MDNSWidget> {
     version: 'Unknown',
     buildNumber: 'Unknown',
   );
+
   ServiceInfo mdnsDetails;
   FlutterMdnsPlugin _mdnsPlugin;
   DiscoveryCallbacks discoveryCallbacks;
@@ -44,24 +45,24 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   @override
   initState() {
     super.initState();
-
     _popUpCtrl = new TextEditingController();
+
     discoveryCallbacks = new DiscoveryCallbacks(
       onDiscovered: (ServiceInfo info) {
-        if (mounted)
+        if (mounted && this.discoveryFlag != CONSTANTS.mdns_discovered)
           setState(() {
             discoveryFlag = CONSTANTS.mdns_discovered;
           });
       },
       onDiscoveryStarted: () {
-        if (mounted)
+        if (mounted && this.discoveryFlag != CONSTANTS.mdns_discovered)
           setState(() {
             discoveryFlag = CONSTANTS.mdns_discovered;
           });
         print("Discovery Started");
       },
       onDiscoveryStopped: () {
-        if (mounted)
+        if (mounted && this.discoveryFlag != CONSTANTS.mdns_failed)
           setState(() {
             discoveryFlag = CONSTANTS.mdns_failed;
           });
@@ -74,9 +75,12 @@ class _MDNSWidgetState extends State<MDNSWidget> {
         if (info.name == CONSTANTS.halo_title &&
             discoveryFlag != CONSTANTS.mdns_resolved) {
           var url = "http://" + info.address + ":" + info.port.toString();
-          setState(() {
-            mdnsDetails = info;
-          });
+          if (this.mdnsDetails != info) {
+            setState(() {
+              mdnsDetails = info;
+            });
+          }
+
           await configureDeviceId(url);
         }
       },
@@ -88,9 +92,12 @@ class _MDNSWidgetState extends State<MDNSWidget> {
                 if (storedBaseUrl != null)
                   {
                     configureDeviceId(storedBaseUrl),
-                    setState(() {
-                      serverUrl = storedBaseUrl;
-                    }),
+                    if (this.serverUrl != storedBaseUrl)
+                      {
+                        setState(() {
+                          serverUrl = storedBaseUrl;
+                        })
+                      }
                   }
                 else
                   {
@@ -111,11 +118,14 @@ class _MDNSWidgetState extends State<MDNSWidget> {
     } else {
       if (prefs.getString("deviceId") != null) {
         print("Id from Shared Pref: " + prefs.getString("deviceId"));
-        setState(() {
-          this.deviceId = prefs.getString("deviceId");
-          this.serverUrl = url;
-          this.discoveryFlag = CONSTANTS.mdns_resolved;
-        });
+        if (this.deviceId != prefs.getString("deviceId") ||
+            this.serverUrl != url ||
+            this.discoveryFlag != CONSTANTS.mdns_resolved)
+          setState(() {
+            this.deviceId = prefs.getString("deviceId");
+            this.serverUrl = url;
+            this.discoveryFlag = CONSTANTS.mdns_resolved;
+          });
       } else {
         var uuid = Uuid();
         var id = uuid.v4();
@@ -312,7 +322,8 @@ class _MDNSWidgetState extends State<MDNSWidget> {
   Widget loadBody() {
     /// load HOME if resolved and deviceId generated
     if (this.discoveryFlag == CONSTANTS.mdns_resolved &&
-        this.deviceId != null && !(this.serverUrl == null || this.serverUrl == "")) {
+        this.deviceId != null &&
+        !(this.serverUrl == null || this.serverUrl == "")) {
       return HomeWidget(
           key: UniqueKey(), deviceId: this.deviceId, serverUrl: this.serverUrl);
     } else {
@@ -325,9 +336,11 @@ class _MDNSWidgetState extends State<MDNSWidget> {
 
   Future<void> _initPackageInfo() async {
     final PackageInfo info = await PackageInfo.fromPlatform();
-    setState(() {
-      _packageInfo = info;
-    });
+    if (this._packageInfo.version == 'Unknown') {
+      setState(() {
+        _packageInfo = info;
+      });
+    }
   }
 
   Future<String> getBaseURlFromSharedPref() async {

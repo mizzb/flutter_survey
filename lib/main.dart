@@ -1,9 +1,7 @@
 import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:queberry_feedback/screens/mdns_widget.dart';
-
 
 import 'constants/constants.dart' as constants;
 

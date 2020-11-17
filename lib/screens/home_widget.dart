@@ -94,7 +94,6 @@ class _HomeWidgetState extends State<HomeWidget> {
                   style: TextStyle(
                       fontSize: 16, color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
-
               ),
 
               Container(
@@ -104,7 +103,6 @@ class _HomeWidgetState extends State<HomeWidget> {
                   style: TextStyle(
                       fontSize: 12, color: Color.fromRGBO(45, 51, 62, 1)),
                 ),
-
               ),
 
               /// If device registered, show device paring status
@@ -213,17 +211,23 @@ class _HomeWidgetState extends State<HomeWidget> {
                 else if (value.statusCode != 200 && value.statusCode != 201)
                   {
                     print("Device not paired"),
-                    this.pairStatus = CONSTANTS.dev_pair_fail,
-                    setState(() {
-                      this.pairFlag = false;
-                    })
+                    if (this.pairFlag == true)
+                      {
+                        setState(() {
+                          this.pairStatus = CONSTANTS.dev_pair_fail;
+                          this.pairFlag = false;
+                        })
+                      }
                   }
               },
           onError: (error) => {
-                this.pairStatus = CONSTANTS.dev_pair_fail,
-                setState(() {
-                  this.pairFlag = false;
-                })
+                if (this.pairFlag == true)
+                  {
+                    setState(() {
+                      this.pairStatus = CONSTANTS.dev_pair_fail;
+                      this.pairFlag = false;
+                    })
+                  }
               });
     });
   }
@@ -239,7 +243,6 @@ class _HomeWidgetState extends State<HomeWidget> {
               else
                 {
                   print("Device rejection failed"),
-
                 },
               Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
